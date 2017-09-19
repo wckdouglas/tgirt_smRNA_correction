@@ -44,7 +44,7 @@ def parse_bed_line(str bed_line):
     chrom, start, end, strand = itemgetter(0,1,2,5)(fields)
     return chrom, int(start), int(end), strand
 
-def parse_bed(bed_file, genome_fa, index_file):
+def parse_bed(bed_file, genome_fa, index_file, outfile):
     cdef:
         str line, chrom, strand, key
         int start, end
@@ -61,4 +61,4 @@ def parse_bed(bed_file, genome_fa, index_file):
             seq = reverse_complement(seq) if strand == "-" else seq
             key = seq[:3] + ','+ seq[-3:]
             factor = index[key.upper()]
-            print(line.strip() + '\t%.3f' %(factor), file=sys.stdout)
+            print(line.strip() + '\t%.3f' %(factor), file=outfile)

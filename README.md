@@ -21,6 +21,9 @@ This module build an index for correction from (1) TGIRT count on a set of known
 	* fasta file (see **test/mir9_2.fa**)
 	* TGIRT experimental count (see **test/tgirt_count.csv**)
 
+* file created:
+  * Index file ($OUTPUT_PREFIX$\_index.pkl)
+
 ```
 usage: build_index.py [-h] -f FASTA [-n NUCLEOTIDE] [-o OUTPUT_PREFIX]
                       [-e EXPECTED_COUNT] -c EXPERIMENTAL_COUNT
@@ -46,6 +49,14 @@ optional arguments:
 ## Add correction factor to fragment BED file ##
 
 This module use the index from last step to add a column indicating the correction factor to a fragment bed file.
+
+* file needed:
+  * genome fasta file
+  * TGIRT-seq bed file containing fragment coordinate (see **test/test.bed**; bam_to_bed.py from [tgirt-seq-tools](https://github.com/wckdouglas/tgirt_seq_tools))
+  * index file 
+
+* file created:
+  * bed file with a new column storing correction factor  (see: test/out.bed)
 
 ```
 usage: tgirt_correction.py [-h] -f FASTA [-b BED] [-i INDEX]
