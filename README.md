@@ -2,7 +2,7 @@
 
 This package used a linear Ridge model to correct count for TGIRT-seq data. A linear model follows:
 
-!()[img/linear_model.gif]
+![](https://raw.githubusercontent.com/wckdouglas/tgirt_smRNA_correction/master/img/linear_model.png?token=AGGQnE6rCxzOmhjEbdxH0VEkaRLlYCcSks5ZysD1wA%3D%3D)
 
 where Y is the \DeltaCPM between true CPM and observed CPM, X are the positional nucleotides while \hat{a} are the influencys of each position nucleotides.
 
@@ -45,7 +45,7 @@ optional arguments:
 
 ## Add correction factor to fragment BED file ##
 
-This module use the index from last step to 
+This module use the index from last step to add a column indicating the correction factor to a fragment bed file.
 
 ```
 usage: tgirt_correction.py [-h] -f FASTA [-b BED] [-i INDEX]
