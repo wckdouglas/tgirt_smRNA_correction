@@ -2,7 +2,7 @@
 
 This package used a linear Ridge model to correct count for TGIRT-seq data. A linear model follows:
 
-$$Y = \hat{a}X + b$$
+![](http://www.sciweavers.org/upload/Tex2Img_1505854946/render.png])
 
 where Y is the \DeltaCPM between true CPM and observed CPM, X are the positional nucleotides while \hat{a} are the influencys of each position nucleotides.
 
