@@ -1,9 +1,11 @@
 # TGIRT smRNA correction #
 
 This package used a linear Ridge model to correct count for TGIRT-seq data. A linear model follows:
+
 \[
 Y = \hat{a}X + b
 \]
+
 where Y is the \DeltaCPM between true CPM and observed CPM, X are the positional nucleotides while \hat{a} are the influencys of each position nucleotides.
 
 
