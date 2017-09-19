@@ -48,8 +48,9 @@ class lm_model():
         self.index_file = index_file
 
         self.df = pd.read_table(self.train_set)\
+            .assign(expected_cpm = lambda d: count_to_cpm(d['expected_count']))\
             .assign(cpm = lambda d: count_to_cpm(d['experimental_count']))\
-            .assign(log_cpm = lambda d: np.log2(d.cpm+1))\
+            .assign(log_cpm = lambda d: np.log2(d.cpm+1) - np.log2(d.expected_cpm))\
             .pipe(preprocess_dataframe) \
             .query('log_cpm > 0') \
             .drop(['experimental_count','cpm'], axis=1)
