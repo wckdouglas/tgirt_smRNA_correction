@@ -42,26 +42,32 @@ def preprocess_dataframe(df):
     return df
 
 class lm_model():
+    '''
+
+    Train a ridge model for predicting log2 cpm deviation from golden standard
+    '''
     def __init__(self, train_set, index_file):
         self.index = {}
         self.train_set = train_set
         self.index_file = index_file
 
-        self.df = pd.read_table(self.train_set)\
-            .assign(expected_cpm = lambda d: count_to_cpm(d['expected_count']))\
-            .assign(cpm = lambda d: count_to_cpm(d['experimental_count']))\
-            .assign(log_cpm = lambda d: np.log2(d.cpm+1) - np.log2(d.expected_cpm))\
-            .pipe(preprocess_dataframe) \
-            .query('log_cpm > 0') \
-            .drop(['experimental_count','cpm','expected_cpm'], axis=1)
-
 
     def preprocess_data(self):
-        self.X = self.df.drop(['seq_id','log_cpm','expected_count'], axis=1)
-        self.Y = self.df['log_cpm'].values
+        self.df = pd.read_table(self.train_set)\
+            .assign(expected_cpm = lambda d: count_to_cpm(d['expected_count']))\
+            .assign(experimental_cpm = lambda d: count_to_cpm(d['experimental_count']))\
+            .assign(log_cpm_diff = lambda d: np.log2(d.experimental_cpm+1) - np.log2(d.expected_cpm+1))\
+            .pipe(preprocess_dataframe) \
+            .drop(['experimental_count','experimental_cpm','expected_cpm','expected_count'], axis=1)
+
+        self.X = self.df.drop(['seq_id','log_cpm_diff'], axis=1)
+        self.Y = self.df['log_cpm_diff'].values
     
 
     def train_lm(self):
+        '''
+        Train a ridge model for correction
+        '''
         self.lm = Ridge()
         self.lm.fit(self.X, self.Y)
         pred_Y = self.lm.predict(self.X)
@@ -73,6 +79,11 @@ class lm_model():
 
 
     def write_index(self):
+        '''
+
+        For each combination of 3' and 5' trinucleotide, generate a correction factor
+
+        '''
         self.index = {}
         coef_dict = {n:c for c, n in zip(self.lm.coef_,self.X.columns)}
         combination = [''.join(x) for x in product('ACTG',repeat=3)]
