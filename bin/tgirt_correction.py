@@ -8,7 +8,7 @@ from tgirt_smRNA_correction.bed_parser import parse_bed
 import sys
 
 def get_opt():
-    parser = argparse.ArgumentParser(description='Using prebuilt bias index, add a column to bed fragment file as correction factor')
+    parser = argparse.ArgumentParser(description='Using prebuilt bias index, add a column to bed fragment file as log2(CPM_observed) - log2(CPM_expected)')
     parser.add_argument('-f','--fasta', help='Genome fasta file', required=True)
     parser.add_argument('-b','--bed', help='Input fragment bed file (default: -)', default='-')
     parser.add_argument('-i','--index', help = 'Index', required=True)
