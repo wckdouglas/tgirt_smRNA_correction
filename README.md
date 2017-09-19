@@ -56,7 +56,7 @@ This module use the index from last step to add a column indicating the correcti
   * index file 
 
 * file created:
-  * bed file with a new column storing correction factor  (see: test/out.bed)
+  * bed file with a new column storing correction factor  (see: **test/out.bed**)
 
 ```
 usage: tgirt_correction.py [-h] -f FASTA [-b BED] [-i INDEX]
