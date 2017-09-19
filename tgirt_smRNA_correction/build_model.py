@@ -53,7 +53,7 @@ class lm_model():
             .assign(log_cpm = lambda d: np.log2(d.cpm+1) - np.log2(d.expected_cpm))\
             .pipe(preprocess_dataframe) \
             .query('log_cpm > 0') \
-            .drop(['experimental_count','cpm'], axis=1)
+            .drop(['experimental_count','cpm','expected_cpm'], axis=1)
 
 
     def preprocess_data(self):
