@@ -4,7 +4,7 @@ This package used a linear Ridge model to correct count for TGIRT-seq data. A li
 
 ![](https://raw.githubusercontent.com/wckdouglas/tgirt_smRNA_correction/master/img/linear_model.png?token=AGGQnE6rCxzOmhjEbdxH0VEkaRLlYCcSks5ZysD1wA%3D%3D)
 
-where Y is the \DeltaCPM between true CPM and observed CPM, X are the positional nucleotides while \hat{a} are the influencys of each position nucleotides.
+where Y is the $\Delta$CPM between true CPM and observed CPM, X are the positional nucleotides while $\hat{a}$ are the influencys of each position nucleotides.
 
 
 Workflow:
