@@ -19,7 +19,7 @@ def get_opt():
 def main():
     args = get_opt()
     fa = pysam.FastaFile(args.fasta)
-    bed = sys.stdin if args.bed == "-" or args.bed == '/dev/stdin' else args.bed
+    bed = sys.stdin if args.bed == "-" or args.bed == '/dev/stdin' else open(args.bed,'r')
     outfile = sys.stdout if args.out_bed == '-' or args.out_bed == '/dev/stdout' else open(args.out_bed,'w')
     parse_bed(bed, fa, args.index, outfile)
 

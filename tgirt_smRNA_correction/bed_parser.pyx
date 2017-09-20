@@ -47,7 +47,7 @@ def parse_bed_line(str bed_line):
     chrom, start, end, name, strand = itemgetter(0,1,2,3,5)(fields)
     return chrom, int(start), int(end), strand, name
 
-def parse_bed(bed_file, genome_fa, index_file, outfile):
+def parse_bed(bed, genome_fa, index_file, outfile):
     '''
     for each bed line, extract sequence and first 3 nucleotides from each end
     and extract bias factor
@@ -61,14 +61,13 @@ def parse_bed(bed_file, genome_fa, index_file, outfile):
         index = pickle.load(idx)
 
 
-    with open(bed_file, 'r') as bed:
-        for line in bed:
-            chrom, start, end ,strand, name = parse_bed_line(line)
-            seq = genome_fa.fetch(chrom, start, end)
-            if 'N' not in seq:
-                seq = reverse_complement(seq) if strand == "-" else seq
-                key = seq[:3] + ','+ seq[-3:]
-                factor = index[key.upper()]
-                print(line.strip() + '\t%.3f' %(factor), file=outfile)
-            else:
-                print('Skipping: %s sequence contain base N' %(name),file=sys.stderr)
+    for line in bed:
+        chrom, start, end ,strand, name = parse_bed_line(line)
+        seq = genome_fa.fetch(chrom, start, end)
+        if 'N' not in seq:
+            seq = reverse_complement(seq) if strand == "-" else seq
+            key = seq[:3] + ','+ seq[-3:]
+            factor = index[key.upper()]
+            print(line.strip() + '\t%.3f' %(factor), file=outfile)
+        else:
+            print('Skipping: %s sequence contain base N' %(name),file=sys.stderr)
