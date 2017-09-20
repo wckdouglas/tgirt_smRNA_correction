@@ -3,16 +3,16 @@
 from __future__ import print_function
 import sys
 import numpy as np
-import string
 from collections import Counter
-import argparse
 import pandas as pd
-from sklearn.preprocessing import OneHotEncoder, LabelEncoder, StandardScaler
 
 
 def fasta_parser(fasta_file_handle):
-    seq = ''
-    seq_id = ''
+    cdef:
+        str seq = ''
+        str seq_id = ''
+        str line
+
     while True:
         line = fasta_file_handle.next()
         if line.startswith('>'):
@@ -49,6 +49,12 @@ class input_table():
 
 
     def build_base_table(self):
+        '''
+        make seq table, extract end nucleotides for the fasta file
+        '''
+        cdef:
+            str seq_id, seq
+
         with open(self.fasta_file,'r') as fasta, open(self.base_table,'w') as out_file :
             print(make_header(self.nucleotide_count), file=out_file)
             for seq_id, seq in fasta_parser(fasta):
@@ -59,6 +65,9 @@ class input_table():
         self.out_table =  pd.read_table(self.base_table)
 
     def incorporate_count(self, input_table, column_name):
+        '''
+        Given a count table, match id with seq table and add as a column with given column name
+        '''
         if input_table:
             df = pd.read_csv(input_table,
                          names = ['seq_id',column_name]) \

@@ -53,6 +53,13 @@ class lm_model():
 
 
     def preprocess_data(self):
+        '''
+        make dummy variable for end nucleotide, and
+        indicate training set:
+
+        X: nx24 matrix, every positional nucleotide as columns
+        Y: log2 CPM difference: experimetnal count - expected count  
+        '''
         self.df = pd.read_table(self.train_set)\
             .assign(expected_cpm = lambda d: count_to_cpm(d['expected_count']))\
             .assign(experimental_cpm = lambda d: count_to_cpm(d['experimental_count']))\
