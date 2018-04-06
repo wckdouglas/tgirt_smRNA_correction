@@ -5,7 +5,7 @@ from tgirt_smRNA_correction.build_table import input_table
 from tgirt_smRNA_correction.build_model import lm_model
 
 def get_opt():
-    parser = argparse.ArgumentParser(description='Building nucleotide table for each transcripts')
+    parser = argparse.ArgumentParser(description='Building nucleotide bias table for each transcripts')
     parser.add_argument('-f','--fasta', help='Small RNA fasta file', required=True)
     parser.add_argument('-n','--nucleotide', help='How many nucleotide to look at from both end?', default=3, type=int)
     parser.add_argument('-o','--output_prefix', default='-',help='How many nucleotide to look at from both end?')
