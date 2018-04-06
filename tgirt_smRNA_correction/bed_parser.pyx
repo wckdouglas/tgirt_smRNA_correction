@@ -116,6 +116,7 @@ def parse_bed(bed, genome_fa, index_file, outfile):
             number_of_out = extract_correction(seq)
             for i in range(number_of_out):
                 print(line.strip(), file=outfile)
+                out_count += 1
         else:
             print('Skipping: %s sequence contain base N' %(name),file=sys.stderr)
     
