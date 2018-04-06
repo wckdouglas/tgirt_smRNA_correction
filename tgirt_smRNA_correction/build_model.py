@@ -99,9 +99,9 @@ class lm_model():
             tail_score = sum(coef_dict["3'-position:%i:%s" %(3-i,t)] for i, t in enumerate(tail))
             for head in combination:
                 head_score = sum(coef_dict["5'-position:%i:%s" %(i+1,t)] for i, t in enumerate(head))
-                self.index[head + ',' + tail] = tail_score + head_score
+                self.index[head + ',' + tail] = 2**(tail_score + head_score)
         
-        with open(self.index_file,'w') as idx_file:
+        with open(self.index_file,'wb') as idx_file:
             pickle.dump(self.index, idx_file)
 
         print('Make index: %s' %self.index_file, file=sys.stdout)

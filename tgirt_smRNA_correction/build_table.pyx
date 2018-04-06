@@ -5,6 +5,7 @@ import sys
 import numpy as np
 from collections import Counter
 import pandas as pd
+import six
 
 
 def fasta_parser(fasta_file_handle):
@@ -14,7 +15,7 @@ def fasta_parser(fasta_file_handle):
         str line
 
     while True:
-        line = fasta_file_handle.next()
+        line = six.next(fasta_file_handle)
         if line.startswith('>'):
             if seq_id and seq:
                 yield seq_id, seq
