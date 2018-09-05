@@ -50,6 +50,7 @@ class lm_model():
         self.index = {}
         self.train_set = train_set
         self.index_file = index_file
+        self.lm = Ridge()
 
 
     def preprocess_data(self):
@@ -75,7 +76,6 @@ class lm_model():
         '''
         Train a ridge model for correction
         '''
-        self.lm = Ridge()
         self.lm.fit(self.X, self.Y)
         pred_Y = self.lm.predict(self.X)
         rsqrd = explained_variance_score(self.Y, pred_Y)
@@ -91,7 +91,6 @@ class lm_model():
         For each combination of 3' and 5' trinucleotide, generate a correction factor
 
         '''
-        self.index = {}
         coef_dict = {n:c for c, n in zip(self.lm.coef_,self.X.columns)}
         combination = [''.join(x) for x in product('ACTG',repeat=3)]
 
@@ -103,5 +102,6 @@ class lm_model():
         
         with open(self.index_file,'wb') as idx_file:
             pickle.dump(self.index, idx_file)
+
 
         print('Make index: %s' %self.index_file, file=sys.stdout)
