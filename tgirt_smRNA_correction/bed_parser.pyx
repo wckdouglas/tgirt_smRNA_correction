@@ -104,6 +104,7 @@ def output_bed(bed_df, outfile):
     '''
 
     template = '{chrom}\t{start}\t{end}\tFrag_{frag_count}_{line_count}\t{frag_len}\t{strand}'
+    out_count = 0
 
     for i, (idx, bedline) in enumerate(bed_df.iterrows()):
         for line_count in range(int(bedline['new_count'])):
@@ -114,7 +115,10 @@ def output_bed(bed_df, outfile):
                                     line_count = line_count, 
                                     frag_len = bedline['end'] - bedline['start'],
                                     strand = bedline['strand'])
-        print(line, file = outfile)
+            print(line, file = outfile)
+            out_count += 1
+
+    print('Output in %i fragments' %(out_count))
 
 
 def parse_bed(bed, genome_fa, index_file, outfile):
