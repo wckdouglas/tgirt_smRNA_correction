@@ -89,9 +89,13 @@ def make_bed_df(bed):
             coor.append(count)
             rows.append(coor)
 
-    return pd.DataFrame(rows, columns = ['chrom','start','end', 'strand', 'count']) \
+    res_df = pd.DataFrame(rows, columns = ['chrom','start','end', 'strand', 'count']) \
         .assign(cpm = lambda d: d['count'].transform(lambda x: x/x.sum()))  \
-        .assign(log2cpm = lambda d: np.log2(d['cpm']))
+        .assign(log2cpm = lambda d: np.log2(d['cpm'])) \
+        .assign(start = lambda d: d.start.astype(int)) \
+        .assign(end = lambda d: d.end.astype(int))
+    print('Read in %i fragments ' %res_df['count'].sum(), file=sys.stderr)
+    return res_df
 
 
 def output_bed(bed_df, outfile):
@@ -99,14 +103,17 @@ def output_bed(bed_df, outfile):
     given a corrected count bed, output bed lines
     '''
 
-    template = '{chrom}\t{start}\t{end}\tFrag_{frag_count}\t{frag_len}\t{strand}'
+    template = '{chrom}\t{start}\t{end}\tFrag_{frag_count}_{line_count}\t{frag_len}\t{strand}'
 
     for i, (idx, bedline) in enumerate(bed_df.iterrows()):
-        line = template.format(chrom = bedline['chrom'],
-                                start = bedline['start'],
-                                end = bedline['end'],
-                                frag_count = i, 
-                                strand = bedline['strand'])
+        for line_count in range(int(bedline['new_count'])):
+            line = template.format(chrom = bedline['chrom'],
+                                    start = bedline['start'],
+                                    end = bedline['end'],
+                                    frag_count = i, 
+                                    line_count = line_count, 
+                                    frag_len = bedline['end'] - bedline['start'],
+                                    strand = bedline['strand'])
         print(line, file = outfile)
 
 
@@ -126,10 +133,11 @@ def parse_bed(bed, genome_fa, index_file, outfile):
 
     fetch_bf_func = partial(seq_to_bias, bias_index, genome_fa)
     bed_df = make_bed_df(bed) \
-        .assign(correction_factor = lambda d: list(map(fetch_bf_func, d.chrom, d.start.astype(int), d.end.astype(int), d.strand))) \
+        .assign(correction_factor = lambda d: list(map(fetch_bf_func, d.chrom, d.start, d.end, d.strand))) \
         .assign(corrected_log2_cpm = lambda d: d.log2cpm - d.correction_factor)\
         .assign(pseudo_count = lambda d: d.corrected_log2_cpm.rpow(2))  \
-        .assign(new_count = lambda d: d['count'].min() * d.pseudo_count/d.pseudo_count.min())
+        .assign(new_count = lambda d: d['count'].min() * d.pseudo_count/d.pseudo_count.min()) \
+        .assign(new_count = lambda d: d['new_count'].clip(1,1e10).astype(int)) 
 
     
     output_bed(bed_df, outfile)
