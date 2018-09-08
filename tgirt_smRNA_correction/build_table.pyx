@@ -40,7 +40,7 @@ def GC_content(seq):
 class input_table():
 
     def __init__(self, args):
-        self.base_table = args.output_prefix + '.base_table.tsv'
+        self.base_table = args.output_prefix + '_base_table.tsv'
         self.fasta_file = args.fasta
         self.nucleotide_count = args.nucleotide
         self.expected_count_file = args.expected_count

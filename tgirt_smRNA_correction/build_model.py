@@ -24,19 +24,19 @@ def get_end(x):
     elif 'tail' in x:
         return "3'"
 
-def make_column_name(colnames):
+def make_column_name(colnames, num_nucleotide):
     col_d = pd.DataFrame({'nucleotide':colnames.str.slice(-1),
              'position':colnames.str.slice(4,5),
              'end':colnames.map(get_end)}) \
-        .assign(offset = lambda d: np.where(d.end=="5'",-1, 3)) \
+        .assign(offset = lambda d: np.where(d.end=="5'",-1, num_nucleotide)) \
         .assign(adjusted_position = lambda d: np.abs(d.position.astype(int) - d.offset))\
         .assign(colnames = colnames)
     return col_d.end + '-position:'+col_d.adjusted_position.astype(str) +':'+ col_d.nucleotide
 
-def preprocess_dataframe(df):
-    nucleotides = df.columns[df.columns.str.contains('head|tail')]
+def preprocess_dataframe(df, num_nucleotide):
+    nucleotides = df.columns[df.columns.str.contains('^head[0-9+]$|^tail[0-9]+')]
     dummies = pd.get_dummies(df[nucleotides])
-    dummies.columns = make_column_name(dummies.columns)
+    dummies.columns = make_column_name(dummies.columns, num_nucleotide)
     df = pd.concat([df,dummies],axis=1) \
         .drop(nucleotides, axis=1) 
     return df
@@ -50,8 +50,8 @@ class lm_model():
         self.index = {}
         self.train_set = train_set
         self.index_file = index_file
-        self.lm = Ridge()
-        self.num_nucleotide
+        self.lm = Ridge(fit_intercept=False)
+        self.num_nucleotide = num_nucleotide
 
 
     def preprocess_data(self):
@@ -66,7 +66,7 @@ class lm_model():
             .assign(expected_cpm = lambda d: count_to_cpm(d['expected_count']))\
             .assign(experimental_cpm = lambda d: count_to_cpm(d['experimental_count']))\
             .assign(log_cpm_diff = lambda d: np.log2(d.experimental_cpm+1) - np.log2(d.expected_cpm+1))\
-            .pipe(preprocess_dataframe) \
+            .pipe(lambda d: preprocess_dataframe(d, self.num_nucleotide)) \
             .drop(['experimental_count','experimental_cpm','expected_cpm','expected_count'], axis=1)
 
         self.X = self.df.drop(['seq_id','log_cpm_diff'], axis=1)
@@ -102,6 +102,10 @@ class lm_model():
                 self.index[head + ',' + tail] = tail_score + head_score
         
         with open(self.index_file,'wb') as idx_file:
+            # create posterior distribution
+            # for log likelihood
+            total = sum(self.index.values())
+            self.index = {k: (p - total) for k, p in self.index.items()}
             pickle.dump(self.index, idx_file)
 
 
