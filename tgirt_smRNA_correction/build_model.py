@@ -46,11 +46,12 @@ class lm_model():
 
     Train a ridge model for predicting log2 cpm deviation from golden standard
     '''
-    def __init__(self, train_set, index_file):
+    def __init__(self, train_set, index_file, num_nucleotide):
         self.index = {}
         self.train_set = train_set
         self.index_file = index_file
         self.lm = Ridge()
+        self.num_nucleotide
 
 
     def preprocess_data(self):
@@ -92,13 +93,13 @@ class lm_model():
 
         '''
         coef_dict = {n:c for c, n in zip(self.lm.coef_,self.X.columns)}
-        combination = [''.join(x) for x in product('ACTG',repeat=3)]
+        combination = [''.join(x) for x in product('ACTG',repeat=self.num_nucleotide)]
 
         for tail in combination:
-            tail_score = sum(coef_dict["3'-position:%i:%s" %(3-i,t)] for i, t in enumerate(tail))
+            tail_score = sum(coef_dict["3'-position:%i:%s" %(self.num_nucleotide-i,t)] for i, t in enumerate(tail))
             for head in combination:
                 head_score = sum(coef_dict["5'-position:%i:%s" %(i+1,t)] for i, t in enumerate(head))
-                self.index[head + ',' + tail] = 2**(tail_score + head_score)
+                self.index[head + ',' + tail] = tail_score + head_score
         
         with open(self.index_file,'wb') as idx_file:
             pickle.dump(self.index, idx_file)

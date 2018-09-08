@@ -31,7 +31,7 @@ def get_opt():
                 'as log2(CPM_observed) - log2(CPM_expected)')
     
     correction.add_argument('-f','--fasta', help='Genome fasta file', required=True)
-    correction.add_argument('-b','--bed', help='Input fragment bed file', required=True)
+    correction.add_argument('-b','--bed', help='Input fragment bed file **sorted!!', required=True)
     correction.add_argument('-i','--index', help = 'Index', required=True)
     correction.add_argument('-o','--out_bed', default='-',help='output file (default: -)')
 
@@ -52,7 +52,7 @@ def build(args):
     ## train model
     index_file = args.output_prefix + '_index.pkl'
     model_file = args.output_prefix + '_model.pkl'
-    lm = lm_model(train_table, index_file)
+    lm = lm_model(train_table, index_file, args.nucleotide)
     lm.preprocess_data()
     lm.train_lm()
     lm.write_index()
