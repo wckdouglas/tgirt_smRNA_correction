@@ -104,8 +104,8 @@ class lm_model():
         with open(self.index_file,'wb') as idx_file:
             # create posterior distribution
             # for log likelihood
-            total = sum(self.index.values())
-            self.index = {k: (p - total) for k, p in self.index.items()}
+            ##total = sum(self.index.values())
+            ##self.index = {k: (p - total) for k, p in self.index.items()}
             pickle.dump(self.index, idx_file)
 
 

@@ -37,5 +37,5 @@ $$ log(CPM_{true}) = log(CPM_{obs}) - \sum_{i}\sum_{b}log(p_{i,b}) $$
 $$ log(\frac{10^6 RC_{true}}{\sum RC_{true}}) = log(\frac{10^6 RC_{obs}}{\sum RC_{obs}}) - \sum_{i}\sum_{b}log(p_{i,b}) $$
 $$ log(\frac{RC_{true}}{\sum RC_{true}}) + log(10^6) = log(\frac{RC_{obs}}{\sum RC_{obs}}) + log({10^6}) - \sum_{i}\sum_{b}log(p_{i,b}) $$
 $$ log(\frac{RC_{true}}{\sum RC_{true}}) = log(\frac{RC_{obs}}{\sum RC_{obs}}) - \sum_{i}\sum_{b}log(p_{i,b}) $$
-$$ log(\frac{RC_{true}}{\sum RC_{true}}) = exp^{(log(\frac{RC_{obs}}{\sum RC_{obs}}) - \sum_{i}\sum_{b}log(p_{i,b}))} $$
+$$ \frac{RC_{true}}{\sum RC_{true}} = exp^{(log(\frac{RC_{obs}}{\sum RC_{obs}}) - \sum_{i}\sum_{b}log(p_{i,b}))} $$
 

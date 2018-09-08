@@ -100,32 +100,40 @@ def parse_bed(bed, genome_fa, index_file, outfile):
 
     fetch_bf_func = partial(seq_to_bias, bias_index, genome_fa)
     bed_template = '{chrom}\t{start}\t{end}\tFrag_{frag_count}_{line_count}\t{frag_len}\t{strand}'
+    rows = []
     with open(bed) as inbed:
         for coor, bedlines in groupby(inbed, key=group_func):
             chrom, start, end, strand = coor
             line_count = len(list(bedlines))
-            bf = fetch_bf_func(chrom, int(start)  , int(end) , strand)
-            log2_pred_count = log2(line_count) - bf
-            pred_count = 2**(log2_pred_count)
-
-            for i in range(int(pred_count)):
-                out_line = bed_template.format(chrom = chrom,
-                                                start = start,
-                                                end = end,
-                                                frag_count = line_count,
-                                                line_count = i,
-                                                frag_len = int(end)- int(start),
-                                                strand = strand)
-                print(out_line, file = outfile)
-
-            # update variables
-            highest_cov = max(highest_cov, line_count)
+            rows.append((chrom, start, end, strand, line_count))
             in_count += line_count
-            out_count += int(pred_count)
+        
+    print ('Read %i fragments' %in_count)
     
+    bed_df = pd.DataFrame(rows, names = ['chrom','start','end','strand','RC']) \
+        .assign(RC_frac = lambda d: d.RC/in_count) \
+        .assign(bf = lambda d: list(map(fetch_bf_func, d.chrom, d.start.astype(int),
+                                        d.end.astype(int), d.strand))) \
+        .assign(log2_fraction = lambda d: np.log2(RC_frac) - d.bf ) \
+        .assign(out_fraction = lambda d: d.log2_fraction.rpow(2)) \
+        .assign(out_count = lambda d: d.out_fraction * in_count) \
+        .query('out_count >= 1') \
+        .assign(out_count = lambda d: d.out_count.astype(int)) \
+        .assign(frag_length = lambda d: d.end.astype(int) - d.start.astype(int) )
+        
+    for line_count, row in bed_df.iterrows():
+        for i in range(row['out_count']):
+            out_line = bed_template.format(chrom = row['chrom'],
+                                            start = row['start'],
+                                            end = row['end'],
+                                            frag_count = line_count,
+                                            line_count = i,
+                                            frag_len = row['frag_length'],
+                                            strand = row['strand]'')
+            print(out_line, file = outfile)
+            out_count += 1
+
     print('Parsed: ', in_count, '\nPrinted: ', out_count, file = sys.stderr)
-    if highest_cov == 1:
-        sys.exit('Is the input bed sorted?')
 
 
 
