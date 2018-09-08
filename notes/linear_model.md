@@ -24,18 +24,18 @@ $$ \Delta log (CPM) = (1)log(p_{1,A}) + (0)log(p_{1,G}) + (0)log(p_{1,T}) +  ...
 
 We define read count (RC) values as :
 
-$$ CPM = \frac{RC}{10^6} $$
+$$ CPM = \frac{10^6 RC}{\sum RC} $$
 
 Thus, 
-$$ RC_{true} = 10^6  CPM_{true}$$
-$$ RC_{obs} = 10^6  CPM_{obs}$$
+$$ RC_{true} = 10^6  CPM_{true} \sum RC_{true}$$
+$$ RC_{obs} = 10^6  CPM_{obs} \sum RC_{obs}$$
 
 To get the true read count ($RC_{true}$)
 
 $$ log(CPM_{obs}) - log(CPM_{true}) = \sum_{i}\sum_{b}log(p_{i,b})  $$
 $$ log(CPM_{true}) = log(CPM_{obs}) - \sum_{i}\sum_{b}log(p_{i,b}) $$
-$$ log(\frac{RC_{true}}{10^6}) = log(\frac{RC_{obs}}{10^6}) - \sum_{i}\sum_{b}log(p_{i,b}) $$
-$$ log(RC_{true}) - log(10^6) = log(RC_{obs}) - log({10^6}) - \sum_{i}\sum_{b}log(p_{i,b}) $$
-$$ log(RC_{true}) = log(RC_{obs}) - \sum_{i}\sum_{b}log(p_{i,b}) $$
-$$ RC_{true} = exp^{(log(RC_{obs}) - \sum_{i}\sum_{b}log(p_{i,b}))} $$
+$$ log(\frac{10^6 RC_{true}}{\sum RC_{true}}) = log(\frac{10^6 RC_{obs}}{\sum RC_{obs}}) - \sum_{i}\sum_{b}log(p_{i,b}) $$
+$$ log(\frac{RC_{true}}{\sum RC_{true}}) + log(10^6) = log(\frac{RC_{obs}}{\sum RC_{obs}}) + log({10^6}) - \sum_{i}\sum_{b}log(p_{i,b}) $$
+$$ log(\frac{RC_{true}}{\sum RC_{true}}) = log(\frac{RC_{obs}}{\sum RC_{obs}}) - \sum_{i}\sum_{b}log(p_{i,b}) $$
+$$ log(\frac{RC_{true}}{\sum RC_{true}}) = exp^{(log(\frac{RC_{obs}}{\sum RC_{obs}}) - \sum_{i}\sum_{b}log(p_{i,b}))} $$
 
