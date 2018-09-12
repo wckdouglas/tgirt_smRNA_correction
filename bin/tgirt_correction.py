@@ -7,8 +7,10 @@ import pyximport
 from tgirt_smRNA_correction.bed_parser import parse_bed
 from tgirt_smRNA_correction.build_table import input_table
 from tgirt_smRNA_correction.build_model import lm_model
+from tgirt_smRNA_correction.build_weights import build_weights
 import sys
 import os
+import pickle
 
 def get_opt():
     parser = argparse.ArgumentParser(prog = os.path.basename(sys.argv[0]))
@@ -32,8 +34,9 @@ def get_opt():
     
     correction.add_argument('-f','--fasta', help='Genome fasta file', required=True)
     correction.add_argument('-b','--bed', help='Input fragment bed file **sorted!!', required=True)
-    correction.add_argument('-i','--index', help = 'Index', required=True)
+    correction.add_argument('-i','--index', help = 'Index, will be ignore is --use_reweight is provided')
     correction.add_argument('-o','--out_bed', default='-',help='output file (default: -)')
+    correction.add_argument('-r','--use_reweight', action='store_true', help='Use a reweighting scheme')
 
     args = parser.parse_args()
     return args
@@ -60,8 +63,26 @@ def build(args):
 
 def correction(args):
     fa = pysam.FastaFile(args.fasta)
+
+    if not (args.use_reweight or args.index):
+        args.use_reweight = True
+        print('Using autoreweight', file=sys.stderr)
+
+    if args.use_reweight:
+        bias_weights = build_weights(args)
+        bias_weights.analyze_bed_ends(max_iter=500000)
+        bias_weights.base_dict_to_weights()
+        bias_weights.output_weights()
+        bias_index  = bias_weights.index
+        print('Built weights')
+    
+    else:
+        idx = open(args.index,'rb')
+        bias_index = pickle.load(idx) 
+        idx.close()
+
     outfile = sys.stdout if args.out_bed == '-' or args.out_bed == '/dev/stdout' else open(args.out_bed,'w')
-    parse_bed(args.bed, fa, args.index, outfile)
+    parse_bed(args.bed, fa, bias_index, outfile)
 
 
 def main():

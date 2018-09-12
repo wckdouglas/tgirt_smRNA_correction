@@ -1,3 +1,4 @@
+
 from __future__ import print_function
 from itertools import groupby
 from libc.math cimport ceil, log2, exp
@@ -66,18 +67,23 @@ def extract_correction_factor(bias_idx, seq):
     correction_factor = bias_idx[key.upper()]
     return correction_factor
 
+def fetch_seq(fa, chrom, start, end, strand):
+    seq = fa.fetch(chrom, start, end)
+    seq = seq if strand == "+" else reverse_complement(seq)
+    return seq
+
 
 def seq_to_bias(bias_idx, fa, chrom,start,end, strand):
     '''
     feed in coordinates, fetch sequence, then fetch bias factor
     '''
-    seq = fa.fetch(chrom, start, end)
-    seq = seq if strand == "+" else reverse_complement(seq)
+
+    seq = fetch_seq(fa, chrom, start, end, strand)
 
     return extract_correction_factor(bias_idx,  seq)
 
 
-def parse_bed(bed, genome_fa, index_file, outfile):
+def parse_bed(bed, genome_fa, bias_index, outfile):
     '''
     for each bed line, extract sequence and first 3 nucleotides from each end
     and extract bias factor
@@ -94,46 +100,16 @@ def parse_bed(bed, genome_fa, index_file, outfile):
         int i
         double pred_count
 
-    with open(index_file,'rb') as idx:
-        bias_index = pickle.load(idx) 
-    
-
     fetch_bf_func = partial(seq_to_bias, bias_index, genome_fa)
-    bed_template = '{chrom}\t{start}\t{end}\tFrag_{frag_count}_{line_count}\t{frag_len}\t{strand}'
-    rows = []
+
     with open(bed) as inbed:
-        for coor, bedlines in groupby(inbed, key=group_func):
-            chrom, start, end, strand = coor
-            line_count = len(list(bedlines))
-            rows.append((chrom, start, end, strand, line_count))
-            in_count += line_count
-        
-    print ('Read %i fragments' %in_count)
-    
-    bed_df = pd.DataFrame(rows, names = ['chrom','start','end','strand','RC']) \
-        .assign(RC_frac = lambda d: d.RC/in_count) \
-        .assign(bf = lambda d: list(map(fetch_bf_func, d.chrom, d.start.astype(int),
-                                        d.end.astype(int), d.strand))) \
-        .assign(log2_fraction = lambda d: np.log2(RC_frac) - d.bf ) \
-        .assign(out_fraction = lambda d: d.log2_fraction.rpow(2)) \
-        .assign(out_count = lambda d: d.out_fraction * in_count) \
-        .query('out_count >= 1') \
-        .assign(out_count = lambda d: d.out_count.astype(int)) \
-        .assign(frag_length = lambda d: d.end.astype(int) - d.start.astype(int) )
-        
-    for line_count, row in bed_df.iterrows():
-        for i in range(row['out_count']):
-            out_line = bed_template.format(chrom = row['chrom'],
-                                            start = row['start'],
-                                            end = row['end'],
-                                            frag_count = line_count,
-                                            line_count = i,
-                                            frag_len = row['frag_length'],
-                                            strand = row['strand]'')
-            print(out_line, file = outfile)
-            out_count += 1
-
-    print('Parsed: ', in_count, '\nPrinted: ', out_count, file = sys.stderr)
+        for line in inbed:
+            fields = line.strip().split('\t')
+            chrom, start, end, strand = itemgetter(0,1,2,5)(fields)
+            bf = fetch_bf_func(chrom, int(start), int(end), strand)
+            assert(bf > 0)
+            print('{}\t{}'.format(line.strip(), bf), file=outfile)
+       
 
 
 
@@ -141,6 +117,5 @@ def parse_bed(bed, genome_fa, index_file, outfile):
 
 
         
-
 
 
