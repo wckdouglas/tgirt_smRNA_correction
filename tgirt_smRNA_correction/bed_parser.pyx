@@ -110,7 +110,7 @@ def lm_correction(bed, genome_fa, bias_index, outfile):
     cols = bias_index['X_col']
     get_seq = partial(fetch_seq, genome_fa)
 
-    for i, bed_df in enumerate(pd.read_table(bed,header=None, chunksize=1000)):
+    for i, bed_df in enumerate(pd.read_table(bed,header=None, chunksize=10000)):
         out_cols = bed_df.columns.tolist()
         out_cols = list(map(lambda x: 'X%i' %x, out_cols))
         bed_df.columns = out_cols
