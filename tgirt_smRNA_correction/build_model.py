@@ -34,10 +34,16 @@ def make_column_name(colnames, num_nucleotide):
         .assign(colnames = colnames)
     return col_d.end + '-position:N' + col_d.sign +col_d.adjusted_position.astype(str) +':'+ col_d.nucleotide
 
+
+
 def preprocess_dataframe(df, num_nucleotide):
     nucleotides = df.columns[df.columns.str.contains('^head[0-9+]$|^tail[0-9]+')]
     dummies = pd.get_dummies(df[nucleotides])
     dummies.columns = make_column_name(dummies.columns, num_nucleotide)
+    cols = dummies.columns.tolist()
+    cols.sort()
+    dummies = dummies.loc[:, cols]
+
     df = pd.concat([df,dummies],axis=1) \
         .drop(nucleotides, axis=1) 
     return df
@@ -96,44 +102,9 @@ class lm_model():
 
         '''
         coef_dict = {n:c for c, n in zip(self.lm.coef_,self.X.columns)}
-        with open(self.coef_file, 'wb') as coef_file:
-            pickle.dump(coef_dict, coef_file)
-
-        # make index
-        combination = [''.join(x) for x in product('ACTG',repeat=self.num_nucleotide)]
-
-        tail_dict = {}
-        for tail in combination:
-            tail_dict[tail] = np.sum([coef_dict["3'-position:N-%i:%s" %(self.num_nucleotide-i,t)] for i, t in enumerate(tail)])
-
-        total_p = sum(list(tail_dict.values()))
-        #for k, v in tail_dict.items():
-        #    tail_dict[k] = v/total_p
-
-        head_dict = {}
-        for head in combination:
-            head_dict[head] = np.sum([coef_dict["5'-position:N+%i:%s" %(j+1,h)] for j, h in enumerate(head)])
-        #total_p = sum(list(head_dict.values()))
-        #for k, v in head_dict.items():
-        #    head_dict[k] = v/total_p
-
-        for t in combination:
-            for h in combination:
-                self.index[h+','+t] = 1/2/np.exp((head_dict[h]+tail_dict[t])/2)
-
-#        for tail in combination:
-#            tail_score = sum(coef_dict["3'-position:N-%i:%s" %(self.num_nucleotide-i,t)] for i, t in enumerate(tail))
-#            for head in combination:
-#                head_score = sum(coef_dict["5'-position:N+%i:%s" %(i+1,t)] for i, t in enumerate(head))
-#               self.index[head + ',' + tail] = 1/np.exp((tail_score + head_score)/2)
-        
-        
-        with open(self.index_file,'wb') as idx_file:
-            ## create posterior distribution
-            ## for log likelihood
-            #total = sum(self.index.values())
-            #self.index = {k: (p - total) for k, p in self.index.items()}
-            pickle.dump(self.index, idx_file)
-
+        with open(self.index_file, 'wb') as index_file:
+            model_param = {'lm': self.lm, 
+                        'X_col': self.X.columns.tolist()}
+            pickle.dump(model_param, index_file)
 
         print('Make index: %s' %self.index_file, file=sys.stdout)

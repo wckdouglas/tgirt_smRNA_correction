@@ -13,6 +13,7 @@ from builtins import range, map
 from functools import partial
 import pandas as pd
 import numpy as np
+from .build_model import preprocess_dataframe
 
 def total_fragment_count(bed_file):
     '''
@@ -83,6 +84,59 @@ def seq_to_bias(bias_idx, fa, chrom,start,end, strand):
     return extract_correction_factor(bias_idx,  seq)
 
 
+
+def feature_engineering(d):
+    ds = []
+    for end in ['head', 'tail']:
+        ds.append(pd.DataFrame(d['%s_seq' %end]\
+                    .apply(list)\
+                    .tolist(), 
+                columns = ['%s%i' %(end,i) for i in range(3)]))
+    features = pd.concat(ds, axis=1)
+    return pd.concat([d, features], axis=1) 
+    
+
+def check_cols(df, cols):
+    existing_cols = set(df.columns)
+    required_cols = set(cols)
+    need_add_cols = required_cols - existing_cols
+    for col in need_add_cols:
+        df[col] = 0
+    return df
+
+
+def lm_correction(bed, genome_fa, bias_index, outfile):
+    ridge_lm = bias_index['lm']
+    cols = bias_index['X_col']
+    get_seq = partial(fetch_seq, genome_fa)
+
+    for i, bed_df in enumerate(pd.read_table(bed,header=None, chunksize=1000)):
+        out_cols = bed_df.columns.tolist()
+        out_cols = list(map(lambda x: 'X%i' %x, out_cols))
+        bed_df.columns = out_cols
+        out_cols.append('correction_factor')
+        
+        out_df = bed_df \
+            .assign(seq = lambda d: list(map(get_seq, d['X0'], d['X1'], d['X2'], d['X5'])))\
+            .assign(head_seq = lambda d: d.seq.str.slice(0,3))\
+            .assign(tail_seq = lambda d: (d.seq + 'N').str.slice(-4,-1)) \
+            .reset_index() \
+            .pipe(feature_engineering) \
+            .pipe(preprocess_dataframe, num_nucleotide = 3)   \
+            .pipe(check_cols, cols)\
+            .assign(pred = lambda d: ridge_lm.predict(d.loc[:, cols]))  \
+            .assign(nucleotide = lambda d: d.loc[:, cols].sum(axis=1))\
+            .assign(correction_factor = lambda d: 1/np.exp(d.pred)) \
+            .assign(correction_factor = lambda d: bed_df.shape[0] * d.correction_factor/d.correction_factor.sum())
+
+        assert(out_df.query('nucleotide != 6').shape[0] == 0)
+        
+        mode = 'w' if i ==0 else 'a'
+        out_df\
+            .loc[:, out_cols]\
+            .to_csv(outfile, mode = mode, header=False, sep='\t', index=False)
+
+
 def parse_bed(bed, genome_fa, bias_index, outfile):
     '''
     for each bed line, extract sequence and first 3 nucleotides from each end
@@ -103,12 +157,13 @@ def parse_bed(bed, genome_fa, bias_index, outfile):
     fetch_bf_func = partial(seq_to_bias, bias_index, genome_fa)
 
     with open(bed) as inbed:
-        for line in inbed:
-            fields = line.strip().split('\t')
-            chrom, start, end, strand = itemgetter(0,1,2,5)(fields)
+        for coor, lines in groupby(inbed, group_func):
+            chrom, start, end, strand = coor
+            lines = list(lines)
             bf = fetch_bf_func(chrom, int(start), int(end), strand)
+            bf = len(lines) * bf
             assert(bf > 0)
-            print('{}\t{}'.format(line.strip(), bf), file=outfile)
+            print('{}\t{}'.format(lines[0].strip(), bf), file=outfile)
        
 
 

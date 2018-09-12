@@ -61,10 +61,10 @@ class build_weights():
 
         self.base_df = pd.DataFrame()\
             .from_dict(self.base_dict)\
-            .transform(lambda x: x/x.sum(axis=0))\
+            .transform(lambda x: np.log(x/x.sum(axis=0)))\
             .reset_index() \
-            .assign(w3 = lambda d: d['3']/d['background'])\
-            .assign(w5 = lambda d: d['5']/d['background']) 
+            .assign(w3 = lambda d: d['3'] - d['background'])\
+            .assign(w5 = lambda d: d['5'] - d['background']) 
 
 
     def base_dict_to_weights(self):
@@ -85,5 +85,5 @@ class build_weights():
             tail_score = self.weight_dict['3'][tail]
             for head in combination:
                 head_score = self.weight_dict['5'][head]
-                self.index[head + ',' + tail] = 1/np.sqrt(tail_score * head_score)  #geometric mean
+                self.index[head + ',' + tail] = 1/np.exp((tail_score + head_score)/2)  #geometric mean
     

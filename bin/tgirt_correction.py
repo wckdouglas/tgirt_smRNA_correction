@@ -4,7 +4,7 @@ from __future__ import print_function
 import pysam
 import argparse
 import pyximport
-from tgirt_smRNA_correction.bed_parser import parse_bed
+from tgirt_smRNA_correction.bed_parser import parse_bed, lm_correction
 from tgirt_smRNA_correction.build_table import input_table
 from tgirt_smRNA_correction.build_model import lm_model
 from tgirt_smRNA_correction.build_weights import build_weights
@@ -63,6 +63,7 @@ def build(args):
 
 def correction(args):
     fa = pysam.FastaFile(args.fasta)
+    outfile = sys.stdout if args.out_bed == '-' or args.out_bed == '/dev/stdout' else open(args.out_bed,'w')
 
     if not (args.use_reweight or args.index):
         args.use_reweight = True
@@ -74,15 +75,17 @@ def correction(args):
         bias_weights.base_dict_to_weights()
         bias_weights.output_weights()
         bias_index  = bias_weights.index
-        print('Built weights')
+        print('Built weights', file=sys.stderr)
+        parse_bed(args.bed, fa, bias_index, outfile)
     
     else:
         idx = open(args.index,'rb')
         bias_index = pickle.load(idx) 
         idx.close()
+        print('Retrieved index', file=sys.stderr)
+        lm_correction(args.bed, fa, bias_index, outfile)
+    print('Added weights', file=sys.stderr)
 
-    outfile = sys.stdout if args.out_bed == '-' or args.out_bed == '/dev/stdout' else open(args.out_bed,'w')
-    parse_bed(args.bed, fa, bias_index, outfile)
 
 
 def main():
