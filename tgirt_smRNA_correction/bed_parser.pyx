@@ -126,8 +126,7 @@ def lm_correction(bed, genome_fa, bias_index, outfile):
             .pipe(check_cols, cols)\
             .assign(pred = lambda d: ridge_lm.predict(d.loc[:, cols]))  \
             .assign(nucleotide = lambda d: d.loc[:, cols].sum(axis=1))\
-            .assign(correction_factor = lambda d: 1/np.exp(d.pred)) \
-            .assign(correction_factor = lambda d: bed_df.shape[0] * d.correction_factor/d.correction_factor.sum())
+            .assign(correction_factor = lambda d: 1/2/np.exp(d.pred)) 
 
         assert(out_df.query('nucleotide != 6').shape[0] == 0)
         
