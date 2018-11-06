@@ -3,13 +3,17 @@
 from __future__ import print_function
 import pandas as pd
 import numpy as np
-from sklearn.linear_model import Ridge
-from sklearn.metrics import explained_variance_score
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import GridSearchCV
 import os
 import sys
 from itertools import product
 import pickle
 from scipy.stats import pearsonr
+from collections import defaultdict
+import re
 
 def positioning(x):
     return x[-1]
@@ -37,7 +41,7 @@ def make_column_name(colnames, num_nucleotide):
 
 
 def preprocess_dataframe(df, num_nucleotide):
-    nucleotides = df.columns[df.columns.str.contains('^head[0-9+]$|^tail[0-9]+')]
+    nucleotides = df.columns[df.columns.str.contains('^head[0-9]+$|^tail[0-9]+')]
     dummies = pd.get_dummies(df[nucleotides])
     dummies.columns = make_column_name(dummies.columns, num_nucleotide)
     cols = dummies.columns.tolist()
@@ -48,7 +52,25 @@ def preprocess_dataframe(df, num_nucleotide):
         .drop(nucleotides, axis=1) 
     return df
 
-class lm_model():
+
+def preprocess_rf_dataframe(df, num_nucleotide):
+    '''
+    labelEncoder for categorical training in RF
+    '''
+    le = LabelEncoder()
+    le.fit(list('ACTG'))
+    nucleotides = df.columns[df.columns.str.contains('^head[0-9]+$|^tail[0-9]+$')]
+    for col in nucleotides:
+        pos_end = "5'" if 'head' in col else "3'"
+        pos = int(col[-1])
+        pos = pos + 1 if pos_end == "5'" else pos - num_nucleotide
+        new_col = pos_end +':'+ str(pos)
+        df[new_col] = le.transform(df[col])
+    
+    return df
+
+
+class nucleotide_model():
     '''
 
     Train a ridge model for predicting log2 cpm deviation from golden standard
@@ -58,7 +80,15 @@ class lm_model():
         self.train_set = train_set
         self.index_file = index_file
         self.coef_file = index_file.replace('_index.pkl','_coef.pkl')
-        self.lm = Ridge(fit_intercept=False)
+        rf = RandomForestRegressor()
+
+        mdepth = list(range(90,100))
+        mdepth.append(None)
+        self.rf = GridSearchCV(estimator=rf,  
+                cv = 8, n_jobs=-1,
+                param_grid={'min_samples_split':range(2,10),
+                            'max_depth' : mdepth,
+                            'n_estimators': range(10,20)}) 
         self.num_nucleotide = num_nucleotide
 
 
@@ -75,12 +105,27 @@ class lm_model():
             .assign(experimental_cpm = lambda d: count_to_cpm(d['experimental_count']))\
             .query('experimental_cpm > 0')\
             .assign(log_cpm_diff = lambda d: np.log(d.experimental_cpm) - np.log(d.expected_cpm))\
-            .pipe(lambda d: preprocess_dataframe(d, self.num_nucleotide)) \
+            .pipe(lambda d: preprocess_rf_dataframe(d, self.num_nucleotide)) \
             .drop(['experimental_count','experimental_cpm','expected_cpm','expected_count'], axis=1)
 
-        self.X = self.df.drop(['seq_id','log_cpm_diff'], axis=1)
+        #self.X = self.df.drop(['seq_id','log_cpm_diff'], axis=1)
+        self.X = self.df.filter(regex="^[35]':")
         self.Y = self.df['log_cpm_diff'].values
-    
+
+
+    def train_rf(self):
+        '''
+        Train a ridge model for correction
+        '''
+        self.rf.fit(self.X, self.Y)
+        pred_Y = self.rf.predict(self.X)
+        rsqrd = r2_score(self.Y, pred_Y)
+        rho, pval = pearsonr(pred_Y, self.Y)
+        print('Trained model', file=sys.stderr)
+        print('R-sqrd: %.2f' %(rsqrd), file=sys.stderr)
+        print('Pearson correlation: %.2f' %(rho), file=sys.stderr)
+
+   
 
     def train_lm(self):
         '''
@@ -88,7 +133,7 @@ class lm_model():
         '''
         self.lm.fit(self.X, self.Y)
         pred_Y = self.lm.predict(self.X)
-        rsqrd = explained_variance_score(self.Y, pred_Y)
+        rsqrd = r2_score(self.Y, pred_Y)
         rho, pval = pearsonr(pred_Y, self.Y)
         print('Trained model', file=sys.stderr)
         print('R-sqrd: %.2f' %(rsqrd), file=sys.stderr)
@@ -101,9 +146,8 @@ class lm_model():
         For each combination of 3' and 5' trinucleotide, generate a correction factor
 
         '''
-        coef_dict = {n:c for c, n in zip(self.lm.coef_,self.X.columns)}
         with open(self.index_file, 'wb') as index_file:
-            model_param = {'lm': self.lm, 
+            model_param = {'model': self.rf, 
                         'X_col': self.X.columns.tolist()}
             pickle.dump(model_param, index_file)
 

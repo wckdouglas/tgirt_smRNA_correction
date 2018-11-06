@@ -1,7 +1,7 @@
 
+
 from __future__ import print_function
 from itertools import groupby
-from libc.math cimport ceil, log2, exp
 from scipy.stats import poisson
 import pysam
 from operator import itemgetter
@@ -13,7 +13,8 @@ from builtins import range, map
 from functools import partial
 import pandas as pd
 import numpy as np
-from .build_model import preprocess_dataframe
+from .build_model import preprocess_dataframe, preprocess_rf_dataframe
+from libc.math cimport ceil, log2, exp
 
 def total_fragment_count(bed_file):
     '''
@@ -106,11 +107,12 @@ def check_cols(df, cols):
 
 
 def lm_correction(bed, genome_fa, bias_index, outfile):
-    ridge_lm = bias_index['lm']
+    # genome_fa = pysam.Fastafile'/stor/work/Lambowitz/ref/RNASeqConsortium/ercc/ERCC92.fa')
+    model = bias_index['model']
     cols = bias_index['X_col']
     get_seq = partial(fetch_seq, genome_fa)
 
-    for i, bed_df in enumerate(pd.read_table(bed,header=None, chunksize=10000)):
+    for i, bed_df in enumerate(pd.read_table(bed,header=None, chunksize=1000000)):
         out_cols = bed_df.columns.tolist()
         out_cols = list(map(lambda x: 'X%i' %x, out_cols))
         bed_df.columns = out_cols
@@ -121,19 +123,20 @@ def lm_correction(bed, genome_fa, bias_index, outfile):
             .assign(head_seq = lambda d: d.seq.str.slice(0,3))\
             .assign(tail_seq = lambda d: (d.seq + 'N').str.slice(-4,-1)) \
             .reset_index() \
-            .pipe(feature_engineering) \
-            .pipe(preprocess_dataframe, num_nucleotide = 3)   \
+            .pipe(feature_engineering)  \
+            .pipe(preprocess_rf_dataframe, num_nucleotide = 3)   \
             .pipe(check_cols, cols)\
-            .assign(pred = lambda d: ridge_lm.predict(d.loc[:, cols]))  \
+            .assign(pred = lambda d: model.predict(d.loc[:, cols]))  \
             .assign(nucleotide = lambda d: d.loc[:, cols].sum(axis=1))\
-            .assign(correction_factor = lambda d: 1/2/np.exp(d.pred)) 
+            .assign(correction_factor = lambda d: np.exp(-d.pred))  \
+            .assign(correction_factor = lambda d: d.shape[0] * d.correction_factor/d.correction_factor.sum())
 
-        assert(out_df.query('nucleotide != 6').shape[0] == 0)
+        #assert(out_df.query('nucleotide != 6').shape[0] == 0)
         
         mode = 'w' if i ==0 else 'a'
         out_df\
             .loc[:, out_cols]\
-            .to_csv(outfile, mode = mode, header=False, sep='\t', index=False)
+            .to_csv(outfile, mode = mode, header=False, sep='\t', index=False, float_format='%.6f')
 
 
 def parse_bed(bed, genome_fa, bias_index, outfile):
@@ -171,5 +174,4 @@ def parse_bed(bed, genome_fa, bias_index, outfile):
 
 
         
-
 

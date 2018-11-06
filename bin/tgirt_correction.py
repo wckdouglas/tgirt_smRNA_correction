@@ -6,7 +6,7 @@ import argparse
 import pyximport
 from tgirt_smRNA_correction.bed_parser import parse_bed, lm_correction
 from tgirt_smRNA_correction.build_table import input_table
-from tgirt_smRNA_correction.build_model import lm_model
+from tgirt_smRNA_correction.build_model import nucleotide_model
 from tgirt_smRNA_correction.build_weights import build_weights
 import sys
 import os
@@ -34,7 +34,7 @@ def get_opt():
     
     correction.add_argument('-f','--fasta', help='Genome fasta file', required=True)
     correction.add_argument('-b','--bed', help='Input fragment bed file **sorted!!', required=True)
-    correction.add_argument('-i','--index', help = 'Index, will be ignore is --use_reweight is provided')
+    correction.add_argument('-i','--index', help = 'Index, will be used as model output is --use_reweight is presented')
     correction.add_argument('-o','--out_bed', default='-',help='output file (default: -)')
     correction.add_argument('-r','--use_reweight', action='store_true', help='Use a reweighting scheme')
 
@@ -55,19 +55,15 @@ def build(args):
     ## train model
     index_file = args.output_prefix + '_index.pkl'
     model_file = args.output_prefix + '_model.pkl'
-    lm = lm_model(train_table, index_file, args.nucleotide)
-    lm.preprocess_data()
-    lm.train_lm()
-    lm.write_index()
+    model = nucleotide_model(train_table, index_file, args.nucleotide)
+    model.preprocess_data()
+    model.train_rf()
+    model.write_index()
 
 
 def correction(args):
     fa = pysam.FastaFile(args.fasta)
     outfile = sys.stdout if args.out_bed == '-' or args.out_bed == '/dev/stdout' else open(args.out_bed,'w')
-
-    if not (args.use_reweight or args.index):
-        args.use_reweight = True
-        print('Using autoreweight', file=sys.stderr)
 
     if args.use_reweight:
         bias_weights = build_weights(args)

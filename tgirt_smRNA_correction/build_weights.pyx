@@ -12,7 +12,6 @@ import pickle
 def merge_trinucleotide(x, y):
     return x.merge(y, on ='trinucleotide', how='outer') 
 
-   
 
 class build_weights():
     def __init__(self, args):
@@ -25,10 +24,13 @@ class build_weights():
         fa_file = '/stor/work/Lambowitz/ref/RNASeqConsortium/ercc/ercc.fa'
         '''
 
+        self.out_index = args.index
         self.bed_file = args.bed
         self.fa = pysam.Fastafile(args.fasta)
-        self.base_dict = None
         self.base_df = None
+        self.index = {}
+        self.base_dict = defaultdict(lambda: defaultdict(int))
+        self.weight_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
 
 
     def analyze_bed_ends(self, max_iter = 100000):
@@ -37,7 +39,6 @@ class build_weights():
             str line, chrom, start, end, strand
             str seq, subseq
         
-        self.base_dict = defaultdict(lambda: defaultdict(int))
         with open(self.bed_file) as inbed:
             while i < max_iter:
                 try:
@@ -68,7 +69,6 @@ class build_weights():
 
 
     def base_dict_to_weights(self):
-        self.weight_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
 
         for i, row in self.base_df.iterrows():
             self.weight_dict['3'][row['index']] = row['w3']
@@ -79,7 +79,6 @@ class build_weights():
         cdef:
             str tail, head
 
-        self.index = {}
         combination = [''.join(x) for x in product('ACTG',repeat=3)]
         for tail in combination:
             tail_score = self.weight_dict['3'][tail]
