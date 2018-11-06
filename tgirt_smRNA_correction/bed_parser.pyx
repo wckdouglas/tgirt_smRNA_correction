@@ -13,8 +13,8 @@ from builtins import range, map
 from functools import partial
 import pandas as pd
 import numpy as np
-from .build_model import preprocess_dataframe, preprocess_rf_dataframe
 from libc.math cimport ceil, log2, exp
+from .model import h2o_rf
 
 def total_fragment_count(bed_file):
     '''
@@ -106,10 +106,12 @@ def check_cols(df, cols):
     return df
 
 
-def lm_correction(bed, genome_fa, bias_index, outfile):
+def model_correction(bed, genome_fa, bias_index, outfile):
     # genome_fa = pysam.Fastafile'/stor/work/Lambowitz/ref/RNASeqConsortium/ercc/ERCC92.fa')
-    model = bias_index['model']
+    model_path = bias_index['model']
     cols = bias_index['X_col']
+    model = h2o_rf()
+    model.load_model(model_path)
     get_seq = partial(fetch_seq, genome_fa)
 
     for i, bed_df in enumerate(pd.read_table(bed,header=None, chunksize=1000000)):
@@ -124,7 +126,6 @@ def lm_correction(bed, genome_fa, bias_index, outfile):
             .assign(tail_seq = lambda d: (d.seq + 'N').str.slice(-4,-1)) \
             .reset_index() \
             .pipe(feature_engineering)  \
-            .pipe(preprocess_rf_dataframe, num_nucleotide = 3)   \
             .pipe(check_cols, cols)\
             .assign(pred = lambda d: model.predict(d.loc[:, cols]))  \
             .assign(nucleotide = lambda d: d.loc[:, cols].sum(axis=1))\

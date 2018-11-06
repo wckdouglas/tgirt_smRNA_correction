@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score
 from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import train_test_split
 import os
 import sys
 from itertools import product
@@ -31,8 +31,9 @@ class nucleotide_model():
         self.index = {}
         self.train_set = train_set
         self.index_file = index_file
+        self.model_file = index_file.replace('_index.pkl','')
         self.coef_file = index_file.replace('_index.pkl','_coef.pkl')
-        self.model = h2o_rf
+        self.model = h2o_rf()
         self.num_nucleotide = num_nucleotide
 
 
@@ -52,19 +53,21 @@ class nucleotide_model():
             .drop(['experimental_count','experimental_cpm','expected_cpm','expected_count'], axis=1)
 
         #self.X = self.df.drop(['seq_id','log_cpm_diff'], axis=1)
-        self.X = self.df.filter(regex="^head|^tail")
-        self.Y = self.df['log_cpm_diff'].values
+        self.X = self.train_df.filter(regex="^head|^tail")
+        self.Y = self.train_df['log_cpm_diff'].values
 
 
     def train_rf(self):
         '''
         Train a ridge model for correction
         '''
-        self.model.fit(self.X, self.Y)
-        pred_Y = self.model.predict(self.X)
-        rsqrd = r2_score(self.Y, pred_Y)
-        rho, pval = pearsonr(pred_Y, self.Y)
-        print('Trained model', file=sys.stderr)
+
+        X_train, X_test, Y_train, Y_test = train_test_split(self.X, self.Y, test_size=0.2)
+        self.model.fit(X_train, Y_train)
+        print('Fitted random forest', file =  sys.stderr)
+        pred_Y = self.model.predict(X_test)
+        rsqrd = r2_score(Y_test, pred_Y)
+        rho, pval = pearsonr(pred_Y, Y_test)
         print('R-sqrd: %.2f' %(rsqrd), file=sys.stderr)
         print('Pearson correlation: %.2f' %(rho), file=sys.stderr)
 
@@ -89,9 +92,11 @@ class nucleotide_model():
         For each combination of 3' and 5' trinucleotide, generate a correction factor
 
         '''
+
+        model_path = self.model.save_model(self.model_file)
         with open(self.index_file, 'wb') as index_file:
-            model_param = {'model': self.model, 
+            model_param = {'model': model_path, 
                         'X_col': self.X.columns.tolist()}
             pickle.dump(model_param, index_file)
-
+        
         print('Make index: %s' %self.index_file, file=sys.stdout)

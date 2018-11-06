@@ -4,10 +4,6 @@ from __future__ import print_function
 import pysam
 import argparse
 import pyximport
-from tgirt_smRNA_correction.bed_parser import parse_bed, lm_correction
-from tgirt_smRNA_correction.build_table import input_table
-from tgirt_smRNA_correction.build_model import nucleotide_model
-from tgirt_smRNA_correction.build_weights import build_weights
 import sys
 import os
 import pickle
@@ -22,7 +18,7 @@ def get_opt():
                     help='Building nucleotide bias table for each transcripts')
     index_builder.add_argument('-f','--fasta', help='Small RNA fasta file', required=True)
     index_builder.add_argument('-n','--nucleotide', help='How many nucleotide to look at from both end?', default=3, type=int)
-    index_builder.add_argument('-o','--output_prefix', default='-',help='How many nucleotide to look at from both end?')
+    index_builder.add_argument('-o','--output_prefix', default='model',help='How many nucleotide to look at from both end?')
     index_builder.add_argument('-e','--expected_count', help='Expected count (comma delimintaed: seq,count) (default: all equal)')
     index_builder.add_argument('-c','--experimental_count', help='Experimental count (comma delimintaed: seq,count)', required=True)
 
@@ -43,6 +39,8 @@ def get_opt():
 
 
 def build(args):
+    from tgirt_smRNA_correction.build_table import input_table
+    from tgirt_smRNA_correction.build_model import nucleotide_model
     # building index    
     ## make nucleotide table
     base_table = input_table(args)
@@ -62,6 +60,8 @@ def build(args):
 
 
 def correction(args):
+    from tgirt_smRNA_correction.bed_parser import parse_bed, model_correction
+    from tgirt_smRNA_correction.build_weights import build_weights
     fa = pysam.FastaFile(args.fasta)
     outfile = sys.stdout if args.out_bed == '-' or args.out_bed == '/dev/stdout' else open(args.out_bed,'w')
 
@@ -79,7 +79,7 @@ def correction(args):
         bias_index = pickle.load(idx) 
         idx.close()
         print('Retrieved index', file=sys.stderr)
-        lm_correction(args.bed, fa, bias_index, outfile)
+        model_correction(args.bed, fa, bias_index, outfile)
     print('Added weights', file=sys.stderr)
 
 
