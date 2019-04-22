@@ -1,10 +1,7 @@
 # TGIRT smRNA correction #
 
-This package used a linear Ridge model to correct count for TGIRT-seq data. A linear model follows:
+This package used a read reweighing scheme, as detailed in [Hansen *et al*](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2896536/). This package is designed for use in TGIRT-se paired-end data.
 
-![](https://raw.githubusercontent.com/wckdouglas/tgirt_smRNA_correction/master/img/linear_model.png?token=AGGQnE6rCxzOmhjEbdxH0VEkaRLlYCcSks5ZysD1wA%3D%3D)
-
-where Y is the $$\Delta$$CPM between true CPM and observed CPM, X are the positional nucleotides while $$\hat{a}$$ are the influencys of each position nucleotides.
 
 
 Workflow:
@@ -14,65 +11,54 @@ Workflow:
 
 ---
 
-## Build index ##
+## Train ##
+This function trains a reweighing model using first three nucleotides from each reads.
 
-This module build an index for correction from (1) TGIRT count on a set of known transcript; (2) small RNA transcriptome fasta file; (3) ground truth gene count of each known transcript
 
 
 * file needed:
-	* fasta file (see **test/mir9_2.fa**)
-	* TGIRT experimental count (see **test/tgirt_count.csv**)
+	* paired-end bam-file (can be sorted or unsorted)
 
 * file created:
-  * Index file ($OUTPUT_PREFIX$\_index.pkl)
+  * Index file (e.g. weights.pkl)
 
 ```
-	usage: build_index.py [-h] -f FASTA [-n NUCLEOTIDE] [-o OUTPUT_PREFIX]
-						  [-e EXPECTED_COUNT] -c EXPERIMENTAL_COUNT
+usage: tgirt_correction.py train [-h] -i INBAM [-x WEIGHT_INDEX] [-c ITER]
 
-	Building nucleotide table for each transcripts
-
-	optional arguments:
-	  -h, --help            show this help message and exit
-	  -f FASTA, --fasta FASTA
-							Small RNA fasta file
-	  -n NUCLEOTIDE, --nucleotide NUCLEOTIDE
-							How many nucleotide to look at from both end?
-	  -o OUTPUT_PREFIX, --output_prefix OUTPUT_PREFIX
-							How many nucleotide to look at from both end?
-	  -e EXPECTED_COUNT, --expected_count EXPECTED_COUNT
-							Expected count (comma delimintaed: seq,count)
-							(default: all equal)
-	  -c EXPERIMENTAL_COUNT, --experimental_count EXPERIMENTAL_COUNT
-							Experimental count (comma delimintaed: seq,count)
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INBAM, --inbam INBAM
+                        Input bam file
+  -x WEIGHT_INDEX, --weight_index WEIGHT_INDEX
+                        Output weight index
+  -c ITER, --iter ITER  How many reads to analyze for each end
 ```
 
 
-## Add correction factor to fragment BED file ##
+## Add weight to each alignment in bam file ##
 
-This module use the index from last step to add a column indicating the correction factor to a fragment bed file.
+This module use the index from last step to add a tag (**AS**) indicating the weight to a bam file.
 
 * file needed:
-  * genome fasta file
-  * TGIRT-seq bed file containing fragment coordinate (see **test/test.bed**; bam_to_bed.py from [tgirt-seq-tools](https://github.com/wckdouglas/tgirt_seq_tools))
+  * bam file (name-sorted!!)
   * index file 
 
 * file created:
-  * bed file with a new column storing correction factor  (see: **test/out.bed**)
+  * bam file with AS tag added
 
 ```
-	usage: tgirt_correction.py [-h] -f FASTA [-b BED] [-i INDEX]
-							   [-o OUTPUT_PREFIX]
+usage: tgirt_correction.py correct [-h] -i INF -x INDEX [-o OUTF] [--bed]
+                                   [-f FASTA]
 
-	Building nucleotide table for each transcripts
-
-	optional arguments:
-	  -h, --help            show this help message and exit
-	  -f FASTA, --fasta FASTA
-							Genome fasta file
-	  -b BED, --bed BED     Input fragment bed file (default: -)
-	  -i INDEX, --index INDEX
-							Index
-	  -o OUTPUT_PREFIX, --output_prefix OUTPUT_PREFIX
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INF, --inf INF     Input fragment !! (name sorted bam or bed)
+  -x INDEX, --index INDEX
+                        Index, will be used as model output
+  -o OUTF, --outf OUTF  output file (default: -)
+  --bed                 input and output files are bed files, otherwise bam
+                        files
+  -f FASTA, --fasta FASTA
+                        Genome fasta file, for correction with bed only
 ```
 
