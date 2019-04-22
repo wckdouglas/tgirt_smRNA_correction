@@ -7,7 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 from collections import defaultdict
 from itertools import product
-from libc.math cimport exp
+from libc.math cimport exp, sqrt
 from pysam.libcalignmentfile cimport AlignmentFile, AlignedSegment
 
 
@@ -79,10 +79,10 @@ class BuildWeights():
         ## scores are in log scale odd
         self.base_df = pd.DataFrame()\
             .from_dict(self.base_dict)\
-            .transform(lambda x: np.log(x) - np.log(x.sum(axis=0)))\
+            .transform(lambda x: x/x.sum(axis=0))\
             .reset_index() \
-            .assign(read1_weights = lambda d: d['background'] - d['read1'])\
-            .assign(read2_weights = lambda d: d['background'] - d['read2']) 
+            .assign(read1_weights = lambda d: d['background'] / d['read1'])\
+            .assign(read2_weights = lambda d: d['background'] / d['read2']) 
 
 
     def base_dict_to_weights(self):
@@ -94,14 +94,15 @@ class BuildWeights():
 
     def compute_weights(self):
         cdef:
-            str tail, head
+            str read1_seq, read2_seq
+            double read1_weight, read2_weight
 
         combination = [''.join(x) for x in product('ACTG',repeat=3)]
-        for tail in combination:
-            tail_score = self.weight_dict['read1'][tail]
-            for head in combination:
-                head_score = self.weight_dict['read2'][head]
-                self.index[head + ',' + tail] = exp(0.5 * (tail_score + head_score) )  #geometric mean
+        for read1_seq in combination:
+            read1_weight = self.weight_dict['read1'][read1_seq]
+            for read2_seq in combination:
+                read2_weight = self.weight_dict['read2'][read2_seq]
+                self.index[read1_seq + ',' + read2_seq] = sqrt(read1_weight * read2_weight)  #geometric mean
 
     def output_weights(self):
         with open(self.weights_index, 'wb') as index:
