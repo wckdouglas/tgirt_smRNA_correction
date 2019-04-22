@@ -7,6 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 from collections import defaultdict
 from itertools import product
+from libc.math cimport exp
 from pysam.libcalignmentfile cimport AlignmentFile, AlignedSegment
 
 
@@ -100,7 +101,7 @@ class BuildWeights():
             tail_score = self.weight_dict['read1'][tail]
             for head in combination:
                 head_score = self.weight_dict['read2'][head]
-                self.index[head + ',' + tail] = np.exp(0.5 * (tail_score + head_score) )  #geometric mean
+                self.index[head + ',' + tail] = exp(0.5 * (tail_score + head_score) )  #geometric mean
 
     def output_weights(self):
         with open(self.weights_index, 'wb') as index:
