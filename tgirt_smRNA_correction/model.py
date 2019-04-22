@@ -1,10 +1,11 @@
 import h2o
 from h2o.estimators.random_forest import H2ORandomForestEstimator
 h2o.init()
+h2o.no_progress()
 
 class h2o_rf():
     def __init__(self):
-        self.rf = H2ORandomForestEstimator()
+        self.rf = H2ORandomForestEstimator(stopping_metric='RMSE')
 
     def fit(self, X, y):
         '''

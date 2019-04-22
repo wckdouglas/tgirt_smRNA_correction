@@ -70,6 +70,7 @@ class nucleotide_model():
         rho, pval = pearsonr(pred_Y, Y_test)
         print('R-sqrd: %.2f' %(rsqrd), file=sys.stderr)
         print('Pearson correlation: %.2f' %(rho), file=sys.stderr)
+        self.model.fit(self.X, self.Y)
 
    
 

@@ -23,7 +23,7 @@ def fasta_parser(fasta_file_handle):
             seq = ''
         else:
             seq += line.strip('\n')
-    yield seq_id, seq
+    yield seq_id, seq.upper()
 
 
 def make_header(nucleotide):
