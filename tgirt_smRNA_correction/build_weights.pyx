@@ -75,13 +75,13 @@ class BuildWeights():
                     break
             
 
-        ## scores are in log scale
+        ## scores are in log scale odd
         self.base_df = pd.DataFrame()\
             .from_dict(self.base_dict)\
-            .transform(lambda x: np.log(x/x.sum(axis=0)))\
+            .transform(lambda x: np.log(x) - np.log(x.sum(axis=0)))\
             .reset_index() \
-            .assign(read1_weights = lambda d: d['read1'] - d['background'])\
-            .assign(read2_weights = lambda d: d['read2'] - d['background']) 
+            .assign(read1_weights = lambda d: d['background'] - d['read1'])\
+            .assign(read2_weights = lambda d: d['background'] - d['read2']) 
 
 
     def base_dict_to_weights(self):
@@ -100,7 +100,7 @@ class BuildWeights():
             tail_score = self.weight_dict['read1'][tail]
             for head in combination:
                 head_score = self.weight_dict['read2'][head]
-                self.index[head + ',' + tail] = 1/np.exp(0.5 * (tail_score + head_score) )  #geometric mean
+                self.index[head + ',' + tail] = np.exp(0.5 * (tail_score + head_score) )  #geometric mean
 
     def output_weights(self):
         with open(self.weights_index, 'wb') as index:
