@@ -22,12 +22,16 @@ def get_opt():
     index_builder.add_argument('-e','--expected_count', help='Expected count (comma delimintaed: seq,count) (default: all equal)')
     index_builder.add_argument('-c','--experimental_count', help='Experimental count (comma delimintaed: seq,count)', required=True)
 
-
+    # weights builder
+    train_weights =  subparser.add_parser('train', 
+                    help='Building trinucleotide weights')
+    train_weights.add_argument('-i', '--inbam', help='Input bam file', required=True)
+    train_weights.add_argument('-o', '--weights', help = 'Weight table', defaults='weight.pkl')
     
+    # correction
     correction = subparser.add_parser('correct', 
             help='Using prebuilt bias index, add a column to bed fragment file '\
                 'as log2(CPM_observed) - log2(CPM_expected)')
-    
     correction.add_argument('-f','--fasta', help='Genome fasta file', required=True)
     correction.add_argument('-b','--bed', help='Input fragment bed file **sorted!!', required=True)
     correction.add_argument('-i','--index', help = 'Index, will be used as model output is --use_reweight is presented')
@@ -91,6 +95,9 @@ def main():
         build(args)
     
     elif args.subcommand == 'correct':
+        correction(args)
+    
+    elif args.subcommand == 'train':
         correction(args)
 
 

@@ -72,7 +72,7 @@ def extract_correction_factor(bias_idx, seq):
 def fetch_seq(fa, chrom, start, end, strand):
     seq = fa.fetch(chrom, start, end)
     seq = seq if strand == "+" else reverse_complement(seq)
-    return seq
+    return seq.upper()
 
 
 def seq_to_bias(bias_idx, fa, chrom,start,end, strand):
