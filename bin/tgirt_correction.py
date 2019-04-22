@@ -26,17 +26,20 @@ def get_opt():
     train_weights =  subparser.add_parser('train', 
                     help='Building trinucleotide weights')
     train_weights.add_argument('-i', '--inbam', help='Input bam file', required=True)
-    train_weights.add_argument('-o', '--weights', help = 'Weight table', defaults='weight.pkl')
+    train_weights.add_argument('-x', '--weight_index', help = 'Output weight index', default='weight.pkl')
+    train_weights.add_argument('-c', '--iter', help = 'How many reads to analyze for each end', default=500000, type=int)
     
     # correction
     correction = subparser.add_parser('correct', 
             help='Using prebuilt bias index, add a column to bed fragment file '\
                 'as log2(CPM_observed) - log2(CPM_expected)')
-    correction.add_argument('-f','--fasta', help='Genome fasta file', required=True)
-    correction.add_argument('-b','--bed', help='Input fragment bed file **sorted!!', required=True)
-    correction.add_argument('-i','--index', help = 'Index, will be used as model output is --use_reweight is presented')
-    correction.add_argument('-o','--out_bed', default='-',help='output file (default: -)')
-    correction.add_argument('-r','--use_reweight', action='store_true', help='Use a reweighting scheme')
+    correction.add_argument('-i', '--inf', help='Input fragment !! (name sorted bam or bed)', required=True)
+    correction.add_argument('-x','--index', help = 'Index, will be used as model output', required=True)
+    correction.add_argument('-o','--outf', default='-',help='output file (default: -)')
+    correction.add_argument('--bed', action='store_true', 
+                            help='input and output files are bed files'\
+                                ', otherwise bam files')
+    correction.add_argument('-f','--fasta', help='Genome fasta file, for correction with bed only')
 
     args = parser.parse_args()
     return args
@@ -63,29 +66,37 @@ def build(args):
     model.write_index()
 
 
-def correction(args):
-    from tgirt_smRNA_correction.bed_parser import parse_bed, model_correction
-    from tgirt_smRNA_correction.build_weights import build_weights
-    fa = pysam.FastaFile(args.fasta)
-    outfile = sys.stdout if args.out_bed == '-' or args.out_bed == '/dev/stdout' else open(args.out_bed,'w')
+def train_weights(args):
+    from tgirt_smRNA_correction.build_weights import BuildWeights
+    bias_weights =BuildWeights(args)
+    bias_weights.analyze_bam_ends()
+    bias_weights.base_dict_to_weights()
+    bias_weights.compute_weights()
+    bias_weights.output_weights()
 
-    if args.use_reweight:
-        bias_weights = build_weights(args)
-        bias_weights.analyze_bed_ends(max_iter=500000)
-        bias_weights.base_dict_to_weights()
-        bias_weights.output_weights()
-        bias_index  = bias_weights.index
-        print('Built weights', file=sys.stderr)
-        parse_bed(args.bed, fa, bias_index, outfile)
-    
-    else:
+
+def correction(args):
+
+
+
+    if args.bed:
+        from tgirt_smRNA_correction.bed_parser import parse_bed, model_correction
+        assert args.fasta is not None, 'Need a reference fasta file'
+        fa = pysam.FastaFile(args.fasta)
+        outfile = sys.stdout if args.outf == '-' or args.outf == '/dev/stdout' else open(args.outf,'w')
+
         idx = open(args.index,'rb')
         bias_index = pickle.load(idx) 
         idx.close()
         print('Retrieved index', file=sys.stderr)
-        model_correction(args.bed, fa, bias_index, outfile)
-    print('Added weights', file=sys.stderr)
+        model_correction(args.inf, fa, bias_index, outfile)
+        print('Added weights', file=sys.stderr)
 
+    else:
+        from tgirt_smRNA_correction.bam_parser import BAMCorrector
+        assert args.inf.endswith('.bam'), 'Not a bam file?'
+        bam_corrector = BAMCorrector(args)
+        bam_corrector.correction()
 
 
 def main():
@@ -98,7 +109,7 @@ def main():
         correction(args)
     
     elif args.subcommand == 'train':
-        correction(args)
+        train_weights(args)
 
 
 

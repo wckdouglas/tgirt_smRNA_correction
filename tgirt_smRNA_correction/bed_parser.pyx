@@ -1,5 +1,3 @@
-
-
 from __future__ import print_function
 from itertools import groupby
 from scipy.stats import poisson

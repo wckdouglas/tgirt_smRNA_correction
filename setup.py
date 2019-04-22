@@ -1,5 +1,7 @@
 from distutils.core import setup, Extension
 import glob
+from pysam import get_include as pysam_get_include
+
 
 try:
     from Cython.Build import cythonize
@@ -34,8 +36,12 @@ except ImportError:
             "be installed before running setup.py (pip install pandas)")
 
 
+include_path = ['/usr/include']
+include_path.extend(pysam_get_include())
+include_path.append('/stor/work/Lambowitz/cdw2854/src/miniconda3/include')
 ext_modules=cythonize([
-        Extension('*', ['tgirt_smRNA_correction/*.pyx'])
+        Extension('*', ['tgirt_smRNA_correction/*.pyx'],
+                  include_dirs = list(include_path) )
 ])
 
 

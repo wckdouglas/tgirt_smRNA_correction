@@ -1,87 +1,108 @@
+from __future__ import print_function
+import pickle
+import sys
 import pysam
 import numpy as np
 import pandas as pd
-from operator import itemgetter
-from sequencing_tools.fastq_tools import reverse_complement
+from tqdm import tqdm
 from collections import defaultdict
-from functools import reduce
 from itertools import product
-import pickle
+from pysam.libcalignmentfile cimport AlignmentFile, AlignedSegment
+
 
 def merge_trinucleotide(x, y):
     return x.merge(y, on ='trinucleotide', how='outer') 
 
 
-class build_weights():
+class BuildWeights():
     def __init__(self, args):
         '''
-        take a bed file, and a fasta file:
+        take a bam file:
 
         # follow hexamer correction but only use 3 nucleotides
         ## https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2896536/
-        bed_file = '/stor/work/Lambowitz/cdw2854/miRNA/ercc/ERCC.bed'
-        fa_file = '/stor/work/Lambowitz/ref/RNASeqConsortium/ercc/ercc.fa'
+
+        Usage:
+        bw = build_weights(args)
+        bw.analyze_bam_ends()
+        bw.compute_weights()
+        bw.output_weights()
+
         '''
 
-        self.out_index = args.index
-        self.bed_file = args.bed
-        self.fa = pysam.Fastafile(args.fasta)
+        self.bam_file = args.inbam
+        self.weights_index = args.weight_index
+        self.max_iter = args.iter
         self.base_df = None
         self.index = {}
         self.base_dict = defaultdict(lambda: defaultdict(int))
         self.weight_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
 
 
-    def analyze_bed_ends(self, max_iter = 100000):
+    def analyze_bam_ends(self):
+        '''
+        analyze bam_reads
+        '''
         cdef:
-            int i = 0
+            int read1_count = 0
+            int read2_count = 0
             str line, chrom, start, end, strand
             str seq, subseq
+            AlignedSegment aln
         
-        with open(self.bed_file) as inbed:
-            while i < max_iter:
+        pbar = tqdm(total=self.max_iter)
+        print('Analyzing %i read pairs' %self.max_iter, file = sys.stderr)
+        with pysam.Samfile(self.bam_file) as inbam:
+            while read1_count < self.max_iter and read2_count < self.max_iter:
                 try:
-                    line = next(inbed) 
-                    fields = line.strip().split('\t')
-                    chrom,start,end,strand = itemgetter(0,1,2,5)(fields)
-                    seq = self.fa.fetch(chrom, int(start), int(end))
-                    seq = reverse_complement(seq) if strand == '-' else seq
+                    aln = next(inbam) 
+                    seq = aln.get_forward_sequence()
                     
-                    
-                    self.base_dict['5'][seq[:3]] += 1
-                    self.base_dict['3'][seq[-3:]] += 1
+                    if aln.is_read1:
+                        read1_count += 1
+                        end = 'read1'
+                    else: 
+                        end = 'read2'
+                        read2_count += 1
+                        pbar.update(1)
 
-                    subseq = seq[3:-3]
+                    self.base_dict[end][seq[:3]] += 1
+
+                    subseq = seq[5:]
                     for (b1,b2,b3) in zip(subseq, subseq[1:], subseq[2:]):
                         self.base_dict['background'][b1+b2+b3] += 1
-                    i += 1
                 except StopIteration:
                     break
             
 
+        ## scores are in log scale
         self.base_df = pd.DataFrame()\
             .from_dict(self.base_dict)\
             .transform(lambda x: np.log(x/x.sum(axis=0)))\
             .reset_index() \
-            .assign(w3 = lambda d: d['3'] - d['background'])\
-            .assign(w5 = lambda d: d['5'] - d['background']) 
+            .assign(read1_weights = lambda d: d['read1'] - d['background'])\
+            .assign(read2_weights = lambda d: d['read2'] - d['background']) 
 
 
     def base_dict_to_weights(self):
 
         for i, row in self.base_df.iterrows():
-            self.weight_dict['3'][row['index']] = row['w3']
-            self.weight_dict['5'][row['index']] = row['w5']
+            self.weight_dict['read1'][row['index']] = row['read1_weights']
+            self.weight_dict['read2'][row['index']] = row['read2_weights']
 
 
-    def output_weights(self):
+    def compute_weights(self):
         cdef:
             str tail, head
 
         combination = [''.join(x) for x in product('ACTG',repeat=3)]
         for tail in combination:
-            tail_score = self.weight_dict['3'][tail]
+            tail_score = self.weight_dict['read1'][tail]
             for head in combination:
-                head_score = self.weight_dict['5'][head]
-                self.index[head + ',' + tail] = 1/np.exp((tail_score + head_score)/2)  #geometric mean
-    
+                head_score = self.weight_dict['read2'][head]
+                self.index[head + ',' + tail] = 1/np.exp(0.5 * (tail_score + head_score) )  #geometric mean
+
+    def output_weights(self):
+        with open(self.weights_index, 'wb') as index:
+            pickle.dump(self.index, index)
+        print('Written %s' %self.weights_index, file = sys.stderr)
