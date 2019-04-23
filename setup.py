@@ -65,5 +65,6 @@ setup(
           'pandas>=0.20.2',
           'scipy>=0.19.0'
       ],
+    package_data={'tgirt_smRNA_correction': ['model/*.pkl']},
     cmdclass = {'build_ext': build_ext}
 )
