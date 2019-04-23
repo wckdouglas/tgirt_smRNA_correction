@@ -73,7 +73,6 @@ def train_weights(args):
     from tgirt_smRNA_correction.build_weights import BuildWeights
     bias_weights = BuildWeights(args)
     bias_weights.analyze_bam_ends()
-    bias_weights.base_dict_to_weights()
     bias_weights.compute_weights()
     bias_weights.output_weights()
 

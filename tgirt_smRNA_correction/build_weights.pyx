@@ -11,10 +11,6 @@ from libc.math cimport exp, sqrt
 from pysam.libcalignmentfile cimport AlignmentFile, AlignedSegment
 
 
-def merge_trinucleotide(x, y):
-    return x.merge(y, on ='trinucleotide', how='outer') 
-
-
 class BuildWeights():
     def __init__(self, args):
         '''
@@ -43,12 +39,13 @@ class BuildWeights():
     def analyze_bam_ends(self):
         '''
         analyze bam_reads
+        First 3 nucleotides from read1 and read2 are store in different dictionary
+        background is collected by looking at trinucloetides beyond position 5
         '''
         cdef:
             int read1_count = 0
             int read2_count = 0
-            str line, chrom, start, end, strand
-            str seq, subseq
+            str end, strand, seq, subseq
             AlignedSegment aln
         
         pbar = tqdm(total=self.max_iter)
@@ -74,9 +71,11 @@ class BuildWeights():
                         self.base_dict['background'][b1+b2+b3] += 1
                 except StopIteration:
                     break
+
+        self.__base_dict_to_weights__()
             
 
-    def base_dict_to_weights(self):
+    def __base_dict_to_weights__(self):
         ## scores are in log scale odd
         self.base_df = pd.DataFrame()\
             .from_dict(self.base_dict)\
@@ -91,6 +90,11 @@ class BuildWeights():
 
 
     def compute_weights(self):
+        '''
+        indexing the weights,
+        it is the geometric mean between read1 weight and read2 weight
+        everything is in log odd before putting into index
+        '''
         cdef:
             str read1_seq, read2_seq
             double read1_weight, read2_weight
@@ -100,9 +104,12 @@ class BuildWeights():
             read1_weight = self.weight_dict['read1'][read1_seq]
             for read2_seq in combination:
                 read2_weight = self.weight_dict['read2'][read2_seq]
-                self.index[read1_seq + ',' + read2_seq] = exp(0.5 * (read1_weight + read2_weight))  #geometric mean
+                self.index[read1_seq + ',' + read2_seq] = exp(0.5 * (read1_weight + read2_weight))  
 
     def output_weights(self):
+        '''
+        save index
+        '''
         with open(self.weights_index, 'wb') as index:
             pickle.dump(self.index, index)
         print('Written %s' %self.weights_index, file = sys.stderr)
