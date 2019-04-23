@@ -50,18 +50,22 @@ This module use the index from last step to add a tag (**ZW**) indicating the we
   * bam file with AS tag added
 
 ```
-usage: tgirt_correction.py correct [-h] -i INF -x INDEX [-o OUTF] [--bed]
+usage: tgirt_correction.py correct [-h] -i INF [-x INDEX] [-o OUTF] [--bed]
                                    [-f FASTA]
 
 optional arguments:
   -h, --help            show this help message and exit
-  -i INF, --inf INF     Input fragment !! (name sorted bam or bed)
+  -i INF, --inf INF     Input fragment (name sorted bam file!!)
   -x INDEX, --index INDEX
-                        Index, will be used as model output
+                        Weight index trained by "train" command (default: /sto
+                        r/work/Lambowitz/cdw2854/src/miniconda3/lib/python3.6/
+                        site-
+                        packages/tgirt_smRNA_correction/model/weights.pkl)
   -o OUTF, --outf OUTF  output file (default: -)
   --bed                 input and output files are bed files, otherwise bam
                         files
   -f FASTA, --fasta FASTA
                         Genome fasta file, for correction with bed only
+
 ```
 
