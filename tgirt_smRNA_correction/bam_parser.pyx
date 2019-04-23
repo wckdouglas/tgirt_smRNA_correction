@@ -56,8 +56,8 @@ class BAMCorrector():
                     tail = read2.get_forward_sequence()[:3]
                     if 'N' not in head and 'N' not in tail:
                         weight = self.index_table[head + ',' + tail]
-                        read1.set_tag('AS', weight, value_type = 'f', replace=True)
-                        read2.set_tag('AS', weight, value_type = 'f', replace=True)
+                        read1.set_tag('ZW', weight, value_type = 'f', replace=True)
+                        read2.set_tag('ZW', weight, value_type = 'f', replace=True)
                         outbam.write(read1)
                         outbam.write(read2)
                     else:

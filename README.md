@@ -4,7 +4,7 @@ This package used a read reweighing scheme, as detailed in [Hansen *et al*](http
 
 ![](https://github.com/wckdouglas/tgirt_smRNA_correction/blob/master/img/reweighing.png?raw=true)
 
-
+where *w(s1, s2)* is the computed weight for a read pair having trinucleotides *s1* as the start of read 1 and *s2* as the start of read 2. This weight is the geometric mean of weight of seeing *s1* in the start of read1 and *s2* in the start of read2. The weight for *s* in each read is calculated by the dividing the probability of seeing *s* in the middle of the read (any position *i* > 3) by the probability of seeing *s* in the start of the read.
 
 
 Workflow:
@@ -40,7 +40,7 @@ optional arguments:
 
 ## Add weight to each alignment in bam file ##
 
-This module use the index from last step to add a tag (**AS**) indicating the weight to a bam file.
+This module use the index from last step to add a tag (**ZW**) indicating the weight to a bam file.
 
 * file needed:
   * bam file (name-sorted!!)
