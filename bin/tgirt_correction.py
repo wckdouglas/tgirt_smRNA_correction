@@ -7,6 +7,10 @@ import pyximport
 import sys
 import os
 import pickle
+import pkg_resources
+model_dir = pkg_resources.resource_filename('tgirt_smRNA_correction', 'model')
+default_model = model_dir + '/weights.pkl'
+
 
 def get_opt():
     parser = argparse.ArgumentParser(prog = os.path.basename(sys.argv[0]))
@@ -26,15 +30,14 @@ def get_opt():
     train_weights =  subparser.add_parser('train', 
                     help='Building trinucleotide weights')
     train_weights.add_argument('-i', '--inbam', help='Input bam file', required=True)
-    train_weights.add_argument('-x', '--weight_index', help = 'Output weight index', default='weight.pkl')
-    train_weights.add_argument('-c', '--iter', help = 'How many reads to analyze for each end', default=500000, type=int)
+    train_weights.add_argument('-x', '--weight_index', help = 'Output weight index (default: weight.pkl)', default='weight.pkl')
+    train_weights.add_argument('-c', '--iter', help = 'How many reads to analyze for each end (default: 500000)', default=500000, type=int)
     
     # correction
     correction = subparser.add_parser('correct', 
-            help='Using prebuilt bias index, add a column to bed fragment file '\
-                'as log2(CPM_observed) - log2(CPM_expected)')
-    correction.add_argument('-i', '--inf', help='Input fragment !! (name sorted bam or bed)', required=True)
-    correction.add_argument('-x','--index', help = 'Index, will be used as model output', required=True)
+            help='Using prebuilt bias index, add a "ZW" tag to bam alignments')
+    correction.add_argument('-i', '--inf', help='Input fragment (name sorted bam file!!)', required=True)
+    correction.add_argument('-x','--index', help = 'Weight index trained by "train" command (default: %s)' %default_model, default = default_model)
     correction.add_argument('-o','--outf', default='-',help='output file (default: -)')
     correction.add_argument('--bed', action='store_true', 
                             help='input and output files are bed files'\
@@ -68,7 +71,7 @@ def build(args):
 
 def train_weights(args):
     from tgirt_smRNA_correction.build_weights import BuildWeights
-    bias_weights =BuildWeights(args)
+    bias_weights = BuildWeights(args)
     bias_weights.analyze_bam_ends()
     bias_weights.base_dict_to_weights()
     bias_weights.compute_weights()
@@ -76,9 +79,6 @@ def train_weights(args):
 
 
 def correction(args):
-
-
-
     if args.bed:
         from tgirt_smRNA_correction.bed_parser import parse_bed, model_correction
         assert args.fasta is not None, 'Need a reference fasta file'
