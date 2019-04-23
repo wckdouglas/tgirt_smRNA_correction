@@ -1,14 +1,13 @@
 from __future__ import print_function
 import pysam
-import numpy as np
-import pandas as pd
-from collections import defaultdict
-from itertools import product
 import pickle
 from pysam.libcalignmentfile cimport AlignmentFile, AlignedSegment
 
 
 def read_paired_bam(AlignmentFile bam_handle):
+    '''
+    paired end bam file generator
+    '''
     cdef:
         AlignedSegment read1
         AlignedSegment read2
@@ -30,18 +29,27 @@ def read_paired_bam(AlignmentFile bam_handle):
 
 class BAMCorrector():
     '''
-    adding an "AS" tag for weights for each bam alignment
+    adding an "ZW" tag for weights for each bam alignment
     '''
     def __init__(self, args):
         self.bam_file = args.inf
         self.index = args.index
         self.out_bam = args.outf
+        self.tag = args.tag
 
         with open(self.index, 'rb') as weights:
             self.index_table = pickle.load(weights)
 
 
     def correction(self):
+        '''
+        adding the tag to the alignments
+
+        1. read both ends of a read pair
+        2. collect the end sequence
+        3. fetch weight from prebuilt weight index
+        4. add to ZW tag
+        '''
 
         cdef:
             AlignedSegment read1, read2

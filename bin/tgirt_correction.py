@@ -39,6 +39,7 @@ def get_opt():
     correction.add_argument('-i', '--inf', help='Input fragment (name sorted bam file!!)', required=True)
     correction.add_argument('-x','--index', help = 'Weight index trained by "train" command (default: %s)' %default_model, default = default_model)
     correction.add_argument('-o','--outf', default='-',help='output file (default: -)')
+    correction.add_argument('-t','--tag', default='ZW',help='BAM tag storing the weight (default: ZW)')
     correction.add_argument('--bed', action='store_true', 
                             help='input and output files are bed files'\
                                 ', otherwise bam files')
