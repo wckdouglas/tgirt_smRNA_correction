@@ -39,6 +39,8 @@ class BAMCorrector():
 
         with open(self.index, 'rb') as weights:
             self.index_table = pickle.load(weights)
+        
+        self.nucl = len(next(iter(self.index_table.keys())).split(',')[0])
 
 
     def correction(self):
@@ -60,8 +62,8 @@ class BAMCorrector():
         with pysam.Samfile(self.bam_file) as inbam:
             with pysam.Samfile(self.out_bam, 'w', template = inbam) as outbam:
                 for paired_count, (read1, read2) in enumerate(read_paired_bam(inbam)):
-                    head = read1.get_forward_sequence()[:3]
-                    tail = read2.get_forward_sequence()[:3]
+                    head = read1.get_forward_sequence()[:self.nucl]
+                    tail = read2.get_forward_sequence()[:self.nucl]
                     if 'N' not in head and 'N' not in tail:
                         weight = self.index_table[head + ',' + tail]
                         read1.set_tag('ZW', weight, value_type = 'f', replace=True)

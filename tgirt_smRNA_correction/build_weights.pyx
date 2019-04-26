@@ -11,6 +11,16 @@ from libc.math cimport exp, sqrt
 from pysam.libcalignmentfile cimport AlignmentFile, AlignedSegment
 
 
+def extract_kmer(str sequence, int k):
+    '''
+    output kmer
+    '''
+    cdef int i
+
+    for i in range(len(sequence) - k + 1):
+        yield(sequence[i:i+k])
+
+
 class BuildWeights():
     def __init__(self, args):
         '''
@@ -28,6 +38,8 @@ class BuildWeights():
         '''
 
         self.bam_file = args.inbam
+        self.nucl = args.nucl
+        self.background_start = self.nucl + 1
         self.weights_index = args.weight_index
         self.max_iter = args.iter
         self.base_df = None
@@ -47,6 +59,7 @@ class BuildWeights():
             int read2_count = 0
             str end, strand, seq, subseq
             AlignedSegment aln
+            str kmer
         
         pbar = tqdm(total=self.max_iter)
         print('Analyzing %i read pairs' %self.max_iter, file = sys.stderr)
@@ -64,11 +77,11 @@ class BuildWeights():
                         read2_count += 1
                         pbar.update(1)
 
-                    self.base_dict[end][seq[:3]] += 1
+                    self.base_dict[end][seq[:self.nucl]] += 1
 
-                    subseq = seq[5:]
-                    for (b1,b2,b3) in zip(subseq, subseq[1:], subseq[2:]):
-                        self.base_dict['background'][b1+b2+b3] += 1
+                    subseq = seq[self.background_start:]
+                    for kmer in extract_kmer(subseq, self.nucl):
+                        self.base_dict['background'][kmer] += 1
                 except StopIteration:
                     break
 
@@ -99,7 +112,7 @@ class BuildWeights():
             str read1_seq, read2_seq
             double read1_weight, read2_weight
 
-        combination = [''.join(x) for x in product('ACTG',repeat=3)]
+        combination = [''.join(x) for x in product('ACTG',repeat=self.nucl)]
         for read1_seq in combination:
             read1_weight = self.weight_dict['read1'][read1_seq]
             for read2_seq in combination:
