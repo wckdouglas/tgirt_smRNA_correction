@@ -52,7 +52,7 @@ class BuildWeights():
         '''
         analyze bam_reads
         First 3 nucleotides from read1 and read2 are store in different dictionary
-        background is collected by looking at trinucloetides beyond position 5
+        background is collected by looking at trinucloetides beyond position 3
         '''
         cdef:
             int read1_count = 0
@@ -81,7 +81,7 @@ class BuildWeights():
 
                     subseq = seq[self.background_start:]
                     for kmer in extract_kmer(subseq, self.nucl):
-                        self.base_dict['background'][kmer] += 1
+                        self.base_dict['background_' + end][kmer] += 1
                 except StopIteration:
                     break
 
@@ -94,8 +94,8 @@ class BuildWeights():
             .from_dict(self.base_dict)\
             .transform(lambda x: np.log(x) - np.log(x.sum(axis=0)))\
             .reset_index() \
-            .assign(read1_weights = lambda d: d['background'] - d['read1'],
-                    read2_weights = lambda d: d['background'] - d['read2']) 
+            .assign(read1_weights = lambda d: d['background_read1'] - d['read1'],
+                    read2_weights = lambda d: d['background_read2'] - d['read2']) 
 
         for i, row in self.base_df.iterrows():
             self.weight_dict['read1'][row['index']] = row['read1_weights']
