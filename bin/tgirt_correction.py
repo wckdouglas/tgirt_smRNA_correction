@@ -33,6 +33,8 @@ def get_opt():
     train_weights.add_argument('-x', '--weight_index', help = 'Output weight index (default: weight.pkl)', default='weight.pkl')
     train_weights.add_argument('-c', '--iter', help = 'How many reads to analyze for each end (default: 500000)', default=500000, type=int)
     train_weights.add_argument('-n', '--nucl', help = 'How many nucleotides from each end are used for computing the weight (default: 3)', default=3, type=int)
+    train_weights.add_argument('-l', '--len', help = 'How many nucleotides beyond --nucl is used for estimating background frequency (default: 50)', default=50, type=int)
+    train_weights.add_argument('--debug', help = 'debug mode', action='store_true')
     
     # correction
     correction = subparser.add_parser('correct', 

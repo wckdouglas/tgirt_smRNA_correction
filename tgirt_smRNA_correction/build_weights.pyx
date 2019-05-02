@@ -40,8 +40,11 @@ class BuildWeights():
         self.bam_file = args.inbam
         self.nucl = args.nucl
         self.background_start = self.nucl + 1
+        self.background_end = args.len + self.background_start
+        assert args.len > args.nucl, 'Number of background training nucleotides (--len) should be larger than --nucl'
         self.weights_index = args.weight_index
         self.max_iter = args.iter
+        self.debug = args.debug
         self.base_df = None
         self.index = {}
         self.base_dict = defaultdict(lambda: defaultdict(int))
@@ -59,7 +62,7 @@ class BuildWeights():
             int read2_count = 0
             str end, strand, seq, subseq
             AlignedSegment aln
-            str kmer
+            str kmer, seq_head
         
         pbar = tqdm(total=self.max_iter)
         print('Analyzing %i read pairs' %self.max_iter, file = sys.stderr)
@@ -69,30 +72,34 @@ class BuildWeights():
                     aln = next(inbam) 
                     seq = aln.get_forward_sequence()
                     
-                    if aln.is_read1:
-                        read1_count += 1
-                        end = 'read1'
-                    else: 
-                        end = 'read2'
-                        read2_count += 1
-                        pbar.update(1)
+                    seq_head = seq[:self.nucl]
+                    if 'N' not in seq_head:
+                        if aln.is_read1:
+                            read1_count += 1
+                            end = 'read1'
+                        else: 
+                            end = 'read2'
+                            read2_count += 1
+                            pbar.update(1)
 
-                    self.base_dict[end][seq[:self.nucl]] += 1
+                        self.base_dict[end][seq_head] += 1
 
-                    subseq = seq[self.background_start:]
-                    for kmer in extract_kmer(subseq, self.nucl):
-                        self.base_dict['background_' + end][kmer] += 1
+                        subseq = seq[self.background_start:self.background_end]
+                        for kmer in extract_kmer(subseq, self.nucl):
+                            self.base_dict['background_' + end][kmer] += 1
                 except StopIteration:
                     break
 
         self.__base_dict_to_weights__()
+        if self.debug:
+            self.base_df.to_csv(self.weights_index + '.csv',index=False)
             
 
     def __base_dict_to_weights__(self):
         ## scores are in log scale odd
         self.base_df = pd.DataFrame()\
             .from_dict(self.base_dict)\
-            .transform(lambda x: np.log(x) - np.log(x.sum(axis=0)))\
+            .transform(lambda x: np.log10(x) - np.log10(x.sum(axis=0)))\
             .reset_index() \
             .assign(read1_weights = lambda d: d['background_read1'] - d['read1'],
                     read2_weights = lambda d: d['background_read2'] - d['read2']) 
@@ -117,7 +124,7 @@ class BuildWeights():
             read1_weight = self.weight_dict['read1'][read1_seq]
             for read2_seq in combination:
                 read2_weight = self.weight_dict['read2'][read2_seq]
-                self.index[read1_seq + ',' + read2_seq] = exp(0.5 * (read1_weight + read2_weight))  
+                self.index[read1_seq + ',' + read2_seq] = 10**(0.5 * (read1_weight + read2_weight))
 
     def output_weights(self):
         '''
