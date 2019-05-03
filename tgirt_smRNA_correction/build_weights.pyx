@@ -39,7 +39,7 @@ class BuildWeights():
 
         self.bam_file = args.inbam
         self.nucl = args.nucl
-        self.background_start = self.nucl + 1
+        self.background_start = self.nucl +  args.offset
         self.background_end = args.len + self.background_start
         assert args.len > args.nucl, 'Number of background training nucleotides (--len) should be larger than --nucl'
         self.weights_index = args.weight_index
@@ -55,14 +55,14 @@ class BuildWeights():
         '''
         analyze bam_reads
         First 3 nucleotides from read1 and read2 are store in different dictionary
-        background is collected by looking at trinucloetides beyond position 3
+        background is collected by looking at trinucloetides beyond position background_start to background_end
         '''
         cdef:
             int read1_count = 0
             int read2_count = 0
             str end, strand, seq, subseq
             AlignedSegment aln
-            str kmer, seq_head
+            str kmer
         
         pbar = tqdm(total=self.max_iter)
         print('Analyzing %i read pairs' %self.max_iter, file = sys.stderr)
@@ -72,17 +72,18 @@ class BuildWeights():
                     aln = next(inbam) 
                     seq = aln.get_forward_sequence()
                     
-                    seq_head = seq[:self.nucl]
-                    if 'N' not in seq_head:
+                    if 'N' not in seq:
                         if aln.is_read1:
                             read1_count += 1
                             end = 'read1'
-                        else: 
+                        elif aln.is_read2: 
                             end = 'read2'
                             read2_count += 1
                             pbar.update(1)
+                        else:
+                            sys.exit('Not read1 or read2')
 
-                        self.base_dict[end][seq_head] += 1
+                        self.base_dict[end][seq[:self.nucl]] += 1
 
                         subseq = seq[self.background_start:self.background_end]
                         for kmer in extract_kmer(subseq, self.nucl):
@@ -92,7 +93,9 @@ class BuildWeights():
 
         self.__base_dict_to_weights__()
         if self.debug:
-            self.base_df.to_csv(self.weights_index + '.csv',index=False)
+            tab_name = self.weights_index + '.csv'
+            self.base_df.to_csv(tab_name,index=False)
+            print('Written: %s' %tab_name)
             
 
     def __base_dict_to_weights__(self):
