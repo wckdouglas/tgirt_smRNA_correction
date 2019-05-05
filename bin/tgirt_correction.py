@@ -14,7 +14,7 @@ default_model = model_dir + '/weights.pkl'
 
 def get_opt():
     parser = argparse.ArgumentParser(prog = os.path.basename(sys.argv[0]))
-    subparser = parser.add_subparsers(help = 'Run type:', dest = 'subcommand')
+    subparser = parser.add_subparsers(help='Reweighting TGIRT-seq reads using end sequence biases. subcommand:', dest = 'subcommand')
     subparser.required=True
         
     #add build index
@@ -28,7 +28,7 @@ def get_opt():
 
     # weights builder
     train_weights =  subparser.add_parser('train', 
-                    help='Building trinucleotide weights')
+                    help='Building end nucleotide weights')
     train_weights.add_argument('-i', '--inbam', help='Input bam file', required=True)
     train_weights.add_argument('-x', '--weight_index', help = 'Output weight index (default: weight.pkl)', default='weight.pkl')
     train_weights.add_argument('-c', '--iter', help = 'How many reads to analyze for each end (default: 500000)', default=500000, type=int)
