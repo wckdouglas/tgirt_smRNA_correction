@@ -61,7 +61,6 @@ setup(
           'cython',
           'numpy',
           'pysam>=0.11.0',
-          'sklearn>=0.18.2',
           'pandas>=0.20.2',
           'scipy>=0.19.0'
       ],
