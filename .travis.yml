@@ -24,6 +24,7 @@ install:
     - source activate test-environment
     - pip install .
     - for SAM in test/data/*sam; do samtools view -b $SAM > ${SAM%.sam}.bam; echo made ${SAM%.sam}.bam; done
+    - python setup.py install
 # # command to run tests
 script: 
     - pytest
