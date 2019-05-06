@@ -62,6 +62,7 @@ setup(
           'numpy',
           'pysam>=0.11.0',
           'pandas>=0.20.2',
+          'tqdm',
           'scipy>=0.19.0'
       ],
     package_data={'tgirt_smRNA_correction': ['model/*.pkl']},
