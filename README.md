@@ -1,5 +1,7 @@
 # TGIRT smRNA correction #
 
+[![Build Status](https://travis-ci.org/wckdouglas/tgirt_smRNA_correction.svg?branch=master)](https://travis-ci.org/wckdouglas/tgirt_smRNA_correction)
+
 This package used a read reweighing scheme, as detailed in [Hansen *et al*](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2896536/). This package is designed for use in TGIRT-se paired-end data.
 
 ![](https://github.com/wckdouglas/tgirt_smRNA_correction/blob/master/img/reweighing.png?raw=true)
