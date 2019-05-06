@@ -4,7 +4,7 @@ python setup.py install
 python --version
 python -c "\
 try:
-    import tgirt_seq_tools
+    import tgirt_smRNA_correction
 except ImportError:
     pass
 "
