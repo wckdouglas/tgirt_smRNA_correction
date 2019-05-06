@@ -19,12 +19,11 @@ install:
 
 
     - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION
-        cython numpy scipy pandas pysam 
+        cython numpy scipy pandas pysam pytest
         samtools future scikit-learn
     - source activate test-environment
     - pip install .
     - for SAM in test/data/*sam; do samtools view -b $SAM > ${SAM%.sam}.bam; echo made ${SAM%.sam}.bam; done
 # # command to run tests
 script: 
-    - bash install.sh
     - pytest
