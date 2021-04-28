@@ -45,7 +45,7 @@ jobs:
         
       - name: Make test data
         run: |
-            - for SAM in test/data/*sam; do samtools view -b $SAM > ${SAM%.sam}.bam; echo Created ${SAM%.sam}.bam; done
+          for SAM in test/data/*sam; do samtools view -b $SAM > ${SAM%.sam}.bam; echo Created ${SAM%.sam}.bam; done
           
       - name: Install Software
         run: |
