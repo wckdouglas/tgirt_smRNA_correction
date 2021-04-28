@@ -41,7 +41,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          conda install cython numpy scipy pandas pysam pytest samtools future scikit-learn tqdm
+          conda install cython numpy scipy pandas pysam pytest samtools=1.9 future scikit-learn tqdm
         
       - name: Make test data
         run: |
