@@ -12,7 +12,12 @@ from functools import partial
 import pandas as pd
 import numpy as np
 from libc.math cimport ceil, log2, exp
+import csv
+from xopen import xopen
 from .model import h2o_rf
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__file__)
 
 def total_fragment_count(bed_file):
     '''
@@ -22,10 +27,7 @@ def total_fragment_count(bed_file):
         total = sum(1 for line in inbed)
     return total
 
-try:
-    complement_seq = string.maketrans('ACTGNactgn','TGACNtgacn')
-except AttributeError:
-    complement_seq = str.maketrans('ACTGNactgn','TGACNtgacn')
+complement_seq = str.maketrans('ACTGNactgn','TGACNtgacn')
 
 def complement(seq):
     """
@@ -68,7 +70,7 @@ def extract_correction_factor(bias_idx, seq):
     return correction_factor
 
 def fetch_seq(fa, chrom, start, end, strand):
-    seq = fa.fetch(chrom, start, end)
+    seq = fa.fetch(str(chrom), int(start), int(end))
     seq = seq if strand == "+" else reverse_complement(seq)
     return seq.upper()
 
@@ -105,7 +107,34 @@ def check_cols(df, cols):
 
 
 def model_correction(bed, genome_fa, bias_index, outfile):
+    """
+    :param str bed: bed file to be weigted
+    :param pysam.FastaFile genome_fa: genome fasta file that the bed file mapped to
+    :param bias_index: dictionary of weights or model
+    :param filehandle outfile: outfile path
+    """
     # genome_fa = pysam.Fastafile'/stor/work/Lambowitz/ref/RNASeqConsortium/ercc/ERCC92.fa')
+    if 'model' in bias_index:
+        use_rf_model(bed, genome_fa, bias_index, outfile)
+    else:
+        use_weight_model(bed, genome_fa, bias_index, outfile)
+
+def use_weight_model(bed, genome_fa, bias_index, outfile):
+    cdef:
+        str line
+
+    logger.info('Using random forest model')
+    with xopen(bed) as inbed:
+        for line in inbed:
+            chrom, start, end, strand = itemgetter(0,1,2,5)(line.split('\t'))
+            seq = fetch_seq(genome_fa, chrom, start, end, strand)
+            weight = bias_index[seq[:3] + ',' + reverse_complement(seq[-3:])]
+            print('{}\t{}'.format(line.strip(),weight), file=outfile)
+
+
+
+def use_rf_model(bed, genome_fa, bias_index, outfile):
+    logger.info('Using random forest model')
     model_path = bias_index['model']
     cols = bias_index['X_col']
     model = h2o_rf()

@@ -5,6 +5,8 @@ from collections import defaultdict
 from .build_model import make_column_name
 import pandas as pd
 
+
+
 def fasta_reader(fasta_file):
     """
     fasta iterator:
